@@ -64,7 +64,7 @@ class SgaLoginController extends Controller
         if ((int) $dados['expires'] < now()->timestamp) {
             abort(
                 403,
-                'O acesso ao Custo Pessoal expirou.'
+                'O acesso ao SGA Finanças expirou.'
             );
         }
 
@@ -91,7 +91,7 @@ class SgaLoginController extends Controller
         if (!$secret) {
             abort(
                 500,
-                'A chave de integração do Custo Pessoal não foi configurada.'
+                'A chave de integração do SGA Finanças não foi configurada.'
             );
         }
 
@@ -207,7 +207,7 @@ class SgaLoginController extends Controller
         if (!$usuario->ativo) {
             abort(
                 403,
-                'Este usuário está bloqueado no Custo Pessoal.'
+                'Este usuário está bloqueado no SGA Finanças.'
             );
         }
 
@@ -234,7 +234,7 @@ class SgaLoginController extends Controller
             ->route('dashboard')
             ->with(
                 'success',
-                'Acesso ao Custo Pessoal realizado com sucesso.'
+                'Acesso ao SGA Finanças realizado com sucesso.'
             );
     }
 }
