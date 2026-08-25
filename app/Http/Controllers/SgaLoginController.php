@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Categoria;
+use App\Models\FormaPagamento;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -200,6 +202,14 @@ class SgaLoginController extends Controller
 
         /*
         |--------------------------------------------------------------------------
+        | CADASTROS INICIAIS DO USUÁRIO
+        |--------------------------------------------------------------------------
+        */
+
+        $this->prepararCadastrosIniciais($usuario);
+
+        /*
+        |--------------------------------------------------------------------------
         | BLOQUEIO LOCAL DO USUÁRIO
         |--------------------------------------------------------------------------
         */
@@ -236,5 +246,166 @@ class SgaLoginController extends Controller
                 'success',
                 'Acesso ao SGA Finanças realizado com sucesso.'
             );
+    }
+
+    private function prepararCadastrosIniciais(User $usuario): void
+    {
+        /*
+        |--------------------------------------------------------------------------
+        | CATEGORIAS PADRÃO POR USUÁRIO
+        |--------------------------------------------------------------------------
+        */
+
+        $categorias = [
+            [
+                'nome' => 'Salário',
+                'tipo' => 'receita',
+                'classificacao' => null,
+            ],
+            [
+                'nome' => 'Renda Extra',
+                'tipo' => 'receita',
+                'classificacao' => null,
+            ],
+            [
+                'nome' => 'Investimentos',
+                'tipo' => 'receita',
+                'classificacao' => null,
+            ],
+            [
+                'nome' => 'Outros',
+                'tipo' => 'receita',
+                'classificacao' => null,
+            ],
+
+            [
+                'nome' => 'Alimentação',
+                'tipo' => 'despesa',
+                'classificacao' => 'essencial',
+            ],
+            [
+                'nome' => 'Moradia',
+                'tipo' => 'despesa',
+                'classificacao' => 'essencial',
+            ],
+            [
+                'nome' => 'Água',
+                'tipo' => 'despesa',
+                'classificacao' => 'essencial',
+            ],
+            [
+                'nome' => 'Energia',
+                'tipo' => 'despesa',
+                'classificacao' => 'essencial',
+            ],
+            [
+                'nome' => 'Internet',
+                'tipo' => 'despesa',
+                'classificacao' => 'essencial',
+            ],
+            [
+                'nome' => 'Saúde',
+                'tipo' => 'despesa',
+                'classificacao' => 'essencial',
+            ],
+            [
+                'nome' => 'Transporte',
+                'tipo' => 'despesa',
+                'classificacao' => 'essencial',
+            ],
+            [
+                'nome' => 'Educação',
+                'tipo' => 'despesa',
+                'classificacao' => 'essencial',
+            ],
+
+            [
+                'nome' => 'Lazer',
+                'tipo' => 'despesa',
+                'classificacao' => 'nao_essencial',
+            ],
+            [
+                'nome' => 'Compras',
+                'tipo' => 'despesa',
+                'classificacao' => 'nao_essencial',
+            ],
+            [
+                'nome' => 'Assinaturas',
+                'tipo' => 'despesa',
+                'classificacao' => 'nao_essencial',
+            ],
+            [
+                'nome' => 'Outros',
+                'tipo' => 'despesa',
+                'classificacao' => 'nao_essencial',
+            ],
+        ];
+
+        foreach ($categorias as $categoria) {
+            Categoria::firstOrCreate(
+                [
+                    'user_id' => $usuario->id,
+                    'nome' => $categoria['nome'],
+                    'tipo' => $categoria['tipo'],
+                ],
+                [
+                    'classificacao' => $categoria['classificacao'],
+                    'ativa' => true,
+                    'padrao_sistema' => true,
+                ]
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | FORMAS DE PAGAMENTO GLOBAIS
+        |--------------------------------------------------------------------------
+        */
+
+        $formasPagamento = [
+            [
+                'nome' => 'Dinheiro',
+                'codigo' => 'dinheiro',
+                'tipo' => 'ambos',
+            ],
+            [
+                'nome' => 'PIX',
+                'codigo' => 'pix',
+                'tipo' => 'ambos',
+            ],
+            [
+                'nome' => 'Cartão de Débito',
+                'codigo' => 'debito',
+                'tipo' => 'ambos',
+            ],
+            [
+                'nome' => 'Cartão de Crédito',
+                'codigo' => 'credito',
+                'tipo' => 'ambos',
+            ],
+            [
+                'nome' => 'Boleto',
+                'codigo' => 'boleto',
+                'tipo' => 'ambos',
+            ],
+            [
+                'nome' => 'Transferência',
+                'codigo' => 'transferencia',
+                'tipo' => 'ambos',
+            ],
+        ];
+
+        foreach ($formasPagamento as $forma) {
+            FormaPagamento::firstOrCreate(
+                [
+                    'codigo' => $forma['codigo'],
+                ],
+                [
+                    'nome' => $forma['nome'],
+                    'tipo' => $forma['tipo'],
+                    'ativa' => true,
+                ]
+            );
+        }
     }
 }
