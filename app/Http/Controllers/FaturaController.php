@@ -16,10 +16,13 @@ class FaturaController extends Controller
 
         $cartaoId = $request->input('cartao_id');
         $situacao = $request->input('situacao');
+
         $ano = $request->input(
             'ano',
             now()->format('Y')
         );
+
+        $mes = $request->input('mes');
 
         $query = Fatura::query()
             ->with([
@@ -43,15 +46,36 @@ class FaturaController extends Controller
             $query->where('situacao', $situacao);
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | FILTRO PELO ANO DO VENCIMENTO
+        |--------------------------------------------------------------------------
+        */
         if ($ano) {
-            $query->where(
-                'competencia',
-                'like',
-                $ano . '-%'
+            $query->whereYear(
+                'data_vencimento',
+                $ano
             );
         }
 
-         $faturas = $query
+        /*
+        |--------------------------------------------------------------------------
+        | FILTRO PELO MÊS DO VENCIMENTO
+        |--------------------------------------------------------------------------
+        */
+        if (
+            $mes
+            && is_numeric($mes)
+            && $mes >= 1
+            && $mes <= 12
+        ) {
+            $query->whereMonth(
+                'data_vencimento',
+                $mes
+            );
+        }
+
+        $faturas = $query
             ->orderBy('data_vencimento')
             ->orderBy('id')
             ->get();
@@ -61,10 +85,16 @@ class FaturaController extends Controller
             ->orderBy('nome')
             ->get();
 
+        /*
+        |--------------------------------------------------------------------------
+        | ANOS DISPONÍVEIS PELO VENCIMENTO
+        |--------------------------------------------------------------------------
+        */
         $anos = Fatura::query()
             ->where('user_id', $userId)
+            ->whereNotNull('data_vencimento')
             ->selectRaw(
-                "DISTINCT LEFT(competencia, 4) as ano"
+                'DISTINCT YEAR(data_vencimento) as ano'
             )
             ->orderByDesc('ano')
             ->pluck('ano');
@@ -77,6 +107,7 @@ class FaturaController extends Controller
                 'cartaoId',
                 'situacao',
                 'ano',
+                'mes',
                 'anos'
             )
         );

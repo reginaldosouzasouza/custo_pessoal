@@ -539,6 +539,15 @@
             </a>
 
 
+            <a href="{{ route('previsao-despesas.index') }}"
+               class="cp-menu-link
+               {{ request()->is('previsao-despesas*') ? 'active' : '' }}">
+
+                <span class="cp-menu-icon">◫</span>
+                <span>Previsão de Despesas</span>
+            </a>
+
+
             <a href="{{ url('/contas') }}"
                class="cp-menu-link
                {{ request()->is('contas*') ? 'active' : '' }}">

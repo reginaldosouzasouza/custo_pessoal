@@ -7,8 +7,10 @@ use App\Models\Fatura;
 use App\Models\MovimentacaoConta;
 use App\Models\Parcela;
 use App\Models\Receita;
+use App\Models\Recorrencia;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class DashboardController extends Controller
 {
@@ -310,6 +312,144 @@ class DashboardController extends Controller
             (float) $despesasProximoMes
             + (float) $parcelasProximoMes
             + (float) $faturasProximoMes;
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | PREVISÃO DE DESPESAS DO MÊS
+        |--------------------------------------------------------------------------
+        |
+        | Mesma lógica da tela "Previsão de Despesas":
+        |
+        | - despesas lançadas com vencimento no mês;
+        | - despesas recorrentes previstas para o mês;
+        | - faturas de cartão com vencimento no mês;
+        | - sem duplicar recorrências já materializadas em despesas.
+        |
+        */
+
+        $queryDespesasPrevistasMes = Despesa::query()
+            ->where('user_id', $userId)
+            ->whereBetween(
+                'data_vencimento',
+                [
+                    $inicioMes,
+                    $fimMes,
+                ]
+            )
+            ->where(
+                'situacao',
+                '!=',
+                'cancelada'
+            );
+
+        if (
+            Schema::hasColumn(
+                'despesas',
+                'recorrencia_id'
+            )
+        ) {
+            $queryDespesasPrevistasMes
+                ->whereNull('recorrencia_id');
+        }
+
+        $totalDespesasPrevistasMes =
+            (float) $queryDespesasPrevistasMes
+                ->sum('valor');
+
+
+        $recorrenciasMes = Recorrencia::query()
+            ->where('user_id', $userId)
+            ->where('tipo', 'despesa')
+            ->where('ativa', true)
+            ->whereDate(
+                'data_inicio',
+                '<=',
+                $fimMes->toDateString()
+            )
+            ->where(function ($query) use ($inicioMes) {
+
+                $query
+                    ->whereNull('data_fim')
+                    ->orWhereDate(
+                        'data_fim',
+                        '>=',
+                        $inicioMes->toDateString()
+                    );
+            })
+            ->get();
+
+
+        $totalRecorrentesPrevistasMes = 0.0;
+
+
+        foreach ($recorrenciasMes as $recorrencia) {
+
+            $vencimentos =
+                $this->vencimentosRecorrenciaNoMes(
+                    $recorrencia,
+                    $inicioMes,
+                    $fimMes
+                );
+
+
+            foreach ($vencimentos as $vencimento) {
+
+                if (
+                    Schema::hasColumn(
+                        'despesas',
+                        'recorrencia_id'
+                    )
+                ) {
+
+                    $jaGerada = Despesa::query()
+                        ->where('user_id', $userId)
+                        ->where(
+                            'recorrencia_id',
+                            $recorrencia->id
+                        )
+                        ->whereDate(
+                            'data_vencimento',
+                            $vencimento->toDateString()
+                        )
+                        ->where(
+                            'situacao',
+                            '!=',
+                            'cancelada'
+                        )
+                        ->exists();
+
+                    if ($jaGerada) {
+                        continue;
+                    }
+                }
+
+
+                $totalRecorrentesPrevistasMes +=
+                    (float) (
+                        $recorrencia->valor_padrao
+                        ?? 0
+                    );
+            }
+        }
+
+
+        $totalFaturasPrevistasMes = Fatura::query()
+            ->where('user_id', $userId)
+            ->whereBetween(
+                'data_vencimento',
+                [
+                    $inicioMes,
+                    $fimMes,
+                ]
+            )
+            ->sum('valor_total');
+
+
+        $previsaoDespesasMes =
+            (float) $totalDespesasPrevistasMes
+            + (float) $totalRecorrentesPrevistasMes
+            + (float) $totalFaturasPrevistasMes;
 
 
         /*
@@ -948,6 +1088,7 @@ class DashboardController extends Controller
                 'atrasados',
                 'cartaoEmAberto',
                 'proximoMes',
+                'previsaoDespesasMes',
                 'previsaoAPagar',
                 'categorias',
                 'graficoMeses',
@@ -959,4 +1100,145 @@ class DashboardController extends Controller
             )
         );
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | VENCIMENTOS DA RECORRÊNCIA NO MÊS
+    |--------------------------------------------------------------------------
+    */
+
+    private function vencimentosRecorrenciaNoMes(
+        Recorrencia $recorrencia,
+        Carbon $inicioMes,
+        Carbon $fimMes
+    )
+    {
+        $resultado = collect();
+
+        $inicioRecorrencia =
+            Carbon::parse(
+                $recorrencia->data_inicio
+            )->startOfDay();
+
+        $fimRecorrencia =
+            $recorrencia->data_fim
+                ? Carbon::parse(
+                    $recorrencia->data_fim
+                )->endOfDay()
+                : null;
+
+
+        if (
+            $recorrencia->frequencia
+            === 'semanal'
+        ) {
+
+            $data = $inicioRecorrencia->copy();
+
+            while ($data->lt($inicioMes)) {
+                $data->addWeek();
+            }
+
+            while ($data->lte($fimMes)) {
+
+                if (
+                    !$fimRecorrencia
+                    || $data->lte($fimRecorrencia)
+                ) {
+                    $resultado->push(
+                        $data->copy()
+                    );
+                }
+
+                $data->addWeek();
+            }
+
+            return $resultado;
+        }
+
+
+        $intervaloMeses = match (
+            $recorrencia->frequencia
+        ) {
+            'mensal' => 1,
+            'trimestral' => 3,
+            'semestral' => 6,
+            'anual' => 12,
+            default => null,
+        };
+
+
+        if (!$intervaloMeses) {
+            return $resultado;
+        }
+
+
+        $mesInicio = $inicioRecorrencia
+            ->copy()
+            ->startOfMonth();
+
+        $diferencaMeses =
+            $mesInicio->diffInMonths(
+                $inicioMes,
+                false
+            );
+
+
+        if ($diferencaMeses < 0) {
+            return $resultado;
+        }
+
+
+        if (
+            $diferencaMeses
+            % $intervaloMeses
+            !== 0
+        ) {
+            return $resultado;
+        }
+
+
+        $dia =
+            (int) (
+                $recorrencia->dia_vencimento
+                ?: $inicioRecorrencia->day
+            );
+
+        $dia = min(
+            $dia,
+            $inicioMes->daysInMonth
+        );
+
+
+        $vencimento = $inicioMes
+            ->copy()
+            ->day($dia);
+
+
+        if (
+            $vencimento->lt(
+                $inicioRecorrencia
+            )
+        ) {
+            return $resultado;
+        }
+
+
+        if (
+            $fimRecorrencia
+            && $vencimento->gt(
+                $fimRecorrencia
+            )
+        ) {
+            return $resultado;
+        }
+
+
+        $resultado->push(
+            $vencimento
+        );
+
+        return $resultado;
+    }
+
 }

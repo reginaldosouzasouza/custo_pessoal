@@ -36,7 +36,7 @@
     .filtros-grid {
         display:grid;
         grid-template-columns:
-            1fr 160px 180px auto;
+            1fr 130px 170px 180px auto;
         gap:12px;
         align-items:end;
     }
@@ -374,6 +374,55 @@
                             )
                         >
                             {{ $anoOpcao }}
+                        </option>
+
+                    @endforeach
+
+                </select>
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label class="form-label">
+                    Mês do vencimento
+                </label>
+
+                <select
+                    name="mes"
+                    class="form-control"
+                >
+                    <option value="">
+                        Todos
+                    </option>
+
+                    @php
+                        $meses = [
+                            1 => 'Janeiro',
+                            2 => 'Fevereiro',
+                            3 => 'Março',
+                            4 => 'Abril',
+                            5 => 'Maio',
+                            6 => 'Junho',
+                            7 => 'Julho',
+                            8 => 'Agosto',
+                            9 => 'Setembro',
+                            10 => 'Outubro',
+                            11 => 'Novembro',
+                            12 => 'Dezembro',
+                        ];
+                    @endphp
+
+                    @foreach($meses as $numeroMes => $nomeMes)
+
+                        <option
+                            value="{{ $numeroMes }}"
+                            @selected(
+                                (string) request('mes') === (string) $numeroMes
+                            )
+                        >
+                            {{ $nomeMes }}
                         </option>
 
                     @endforeach

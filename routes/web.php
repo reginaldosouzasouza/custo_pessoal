@@ -15,6 +15,7 @@ use App\Http\Controllers\MovimentacaoContaController;
 use App\Http\Controllers\TransferenciaController;
 use App\Http\Controllers\RecorrenciaController;
 use App\Http\Controllers\RelatorioController;
+use App\Http\Controllers\PrevisaoDespesaController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -275,6 +276,10 @@ Route::middleware('auth')->group(function () {
     [RelatorioController::class, 'index']
     )->name('relatorios.index');
 
+    Route::get(
+        '/previsao-despesas',
+        [PrevisaoDespesaController::class, 'index']
+    )->name('previsao-despesas.index');
 });
 
 require __DIR__.'/auth.php';

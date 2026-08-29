@@ -142,6 +142,19 @@
         font-size: 11px;
     }
 
+    .summary-link {
+        display:inline-block;
+        margin-top:5px;
+        color:#2777d7;
+        font-size:11px;
+        font-weight:600;
+        text-decoration:none;
+    }
+
+    .summary-link:hover {
+        text-decoration:underline;
+    }
+
     /* =========================================================
        GRÁFICOS
     ========================================================= */
@@ -576,6 +589,46 @@
             <div class="summary-note">
                 Total gasto no mês
             </div>
+        </div>
+
+    </div>
+
+
+    {{-- PREVISÃO DE DESPESAS DO MÊS --}}
+    <div class="cp-card summary-card">
+
+        <div class="summary-icon icon-purple">
+            ◫
+        </div>
+
+        <div>
+            <div class="summary-title saldo-title">
+                Previsão de despesas
+
+                <span class="saldo-help">
+                    ?
+                    <span class="saldo-tooltip">
+                        Soma das despesas lançadas, contas recorrentes
+                        e faturas de cartão com vencimento no mês atual.
+                        Compras do cartão não são somadas novamente.
+                    </span>
+                </span>
+            </div>
+
+            <div class="summary-value value-purple">
+                R$ {{ number_format($previsaoDespesasMes ?? 0, 2, ',', '.') }}
+            </div>
+
+            <div class="summary-note">
+                Total previsto para o mês
+            </div>
+
+            <a
+                href="{{ route('previsao-despesas.index') }}"
+                class="summary-link"
+            >
+                Ver previsão
+            </a>
         </div>
 
     </div>
