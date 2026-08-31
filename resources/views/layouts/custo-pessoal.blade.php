@@ -56,7 +56,10 @@
 
         .cp-sidebar {
             width: 250px;
-            min-height: 100vh;
+
+            height: 100vh;
+            height: 100dvh;
+
             background:
                 linear-gradient(
                     180deg,
@@ -78,6 +81,12 @@
             flex-direction: column;
 
             transition: transform .25s ease;
+
+            /*
+             * A sidebar inteira não rola.
+             * Quem rola é somente o menu.
+             */
+            overflow: hidden;
         }
 
         .cp-brand {
@@ -92,6 +101,11 @@
 
             border-bottom:
                 1px solid rgba(255,255,255,.08);
+
+            /*
+             * Não deixa o logo encolher.
+             */
+            flex-shrink: 0;
         }
 
         .cp-brand-text {
@@ -144,9 +158,51 @@
             height: 31px;
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | ÁREA ROLÁVEL DO MENU
+        |--------------------------------------------------------------------------
+        */
+
         .cp-menu {
-            padding: 20px 12px;
+            padding: 20px 12px 30px;
+
             flex: 1;
+
+            /*
+             * Fundamental para funcionar corretamente
+             * dentro de um container flex.
+             */
+            min-height: 0;
+
+            overflow-y: auto;
+            overflow-x: hidden;
+
+            -webkit-overflow-scrolling: touch;
+
+            overscroll-behavior: contain;
+        }
+
+        /*
+         * Barra discreta no desktop.
+         * No celular o navegador pode ocultá-la visualmente,
+         * mas o gesto de rolagem continuará funcionando.
+         */
+        .cp-menu::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .cp-menu::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .cp-menu::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,.20);
+            border-radius: 10px;
+        }
+
+        .cp-menu::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,.30);
         }
 
         .cp-menu-link {
@@ -199,6 +255,8 @@
             justify-content: center;
 
             font-size: 19px;
+
+            flex-shrink: 0;
         }
 
         .cp-sidebar-footer {
@@ -209,6 +267,11 @@
 
             font-size: 12px;
             color: #d7e1ec;
+
+            /*
+             * Rodapé não entra na rolagem do menu.
+             */
+            flex-shrink: 0;
         }
 
         .cp-sidebar-footer strong {
@@ -434,6 +497,16 @@
                 width: 100%;
                 margin-left: 0;
             }
+
+            /*
+             * No celular, a rolagem continua restrita
+             * apenas à área dos itens.
+             */
+            .cp-menu {
+                overflow-y: auto;
+                overflow-x: hidden;
+                -webkit-overflow-scrolling: touch;
+            }
         }
 
         @media (max-width: 768px) {
@@ -499,6 +572,7 @@
             </div>
 
             <div class="cp-brand-text">
+
                 <span class="cp-brand-title">
                     SGA Finanças
                 </span>
@@ -506,9 +580,11 @@
                 <span class="cp-brand-subtitle">
                     Sua vida financeira em um só lugar.
                 </span>
+
             </div>
 
         </div>
+
 
         <nav class="cp-menu">
 
@@ -518,6 +594,7 @@
 
                 <span class="cp-menu-icon">⌂</span>
                 <span>Dashboard</span>
+
             </a>
 
 
@@ -527,6 +604,7 @@
 
                 <span class="cp-menu-icon">↗</span>
                 <span>Receitas</span>
+
             </a>
 
 
@@ -536,6 +614,7 @@
 
                 <span class="cp-menu-icon">▣</span>
                 <span>Despesas</span>
+
             </a>
 
 
@@ -545,6 +624,7 @@
 
                 <span class="cp-menu-icon">◫</span>
                 <span>Previsão de Despesas</span>
+
             </a>
 
 
@@ -554,55 +634,58 @@
 
                 <span class="cp-menu-icon">▥</span>
                 <span>Contas e Carteiras</span>
+
             </a>
 
+
             <a href="{{ route('transferencias.index') }}"
-                class="cp-menu-link
-                {{ request()->is('transferencias*') ? 'active' : '' }}">
+               class="cp-menu-link
+               {{ request()->is('transferencias*') ? 'active' : '' }}">
 
                 <span class="cp-menu-icon">⇄</span>
                 <span>Transferências</span>
-            </a>
 
+            </a>
 
 
             <a href="{{ route('movimentacoes.index') }}"
-                class="cp-menu-link
-                {{ request()->is('movimentacoes*') ? 'active' : '' }}">
+               class="cp-menu-link
+               {{ request()->is('movimentacoes*') ? 'active' : '' }}">
 
                 <span class="cp-menu-icon">⇄</span>
                 <span>Movimentações</span>
+
             </a>
 
 
-
             <a href="{{ route('cartoes.index') }}"
-                class="cp-menu-link
-                {{ request()->is('cartoes*') ? 'active' : '' }}">
+               class="cp-menu-link
+               {{ request()->is('cartoes*') ? 'active' : '' }}">
 
                 <span class="cp-menu-icon">▤</span>
                 <span>Cartões</span>
+
             </a>
 
 
             <a href="{{ route('compras-cartao.index') }}"
-                class="cp-menu-link
-                {{ request()->is('compras-cartao*') ? 'active' : '' }}">
+               class="cp-menu-link
+               {{ request()->is('compras-cartao*') ? 'active' : '' }}">
 
                 <span class="cp-menu-icon">🛒</span>
                 <span>Compras no Cartão</span>
+
             </a>
 
+
             <a href="{{ route('faturas.index') }}"
-                class="cp-menu-link
-                {{ request()->is('faturas*') ? 'active' : '' }}">
+               class="cp-menu-link
+               {{ request()->is('faturas*') ? 'active' : '' }}">
 
                 <span class="cp-menu-icon">▧</span>
                 <span>Faturas</span>
+
             </a>
-
-
-            
 
 
             <a href="{{ url('/recorrencias') }}"
@@ -611,6 +694,7 @@
 
                 <span class="cp-menu-icon">▦</span>
                 <span>Contas Fixas</span>
+
             </a>
 
 
@@ -620,31 +704,37 @@
 
                 <span class="cp-menu-icon">◔</span>
                 <span>Categorias</span>
+
             </a>
 
 
-           <a href="{{ route('relatorios.index') }}"
-                class="cp-menu-link
-                {{ request()->routeIs('relatorios.index') ? 'active' : '' }}">
+            <a href="{{ route('relatorios.index') }}"
+               class="cp-menu-link
+               {{ request()->routeIs('relatorios.index') ? 'active' : '' }}">
 
                 <span class="cp-menu-icon">▥</span>
                 <span>Relatórios</span>
+
             </a>
 
 
             <a href="{{ route('relatorios.despesas') }}"
-                class="cp-menu-link
-                {{ request()->routeIs('relatorios.despesas*') ? 'active' : '' }}">
+               class="cp-menu-link
+               {{ request()->routeIs('relatorios.despesas*') ? 'active' : '' }}">
 
                 <span class="cp-menu-icon">▦</span>
                 <span>Relatório de Despesas</span>
+
             </a>
 
         </nav>
 
+
         <div class="cp-sidebar-footer">
 
-            <strong>Assinatura</strong>
+            <strong>
+                Assinatura
+            </strong>
 
             <span>
                 Situação será exibida aqui
@@ -669,9 +759,11 @@
 
             <div class="cp-topbar-left">
 
-                <button type="button"
-                        class="cp-menu-toggle"
-                        id="cpMenuToggle">
+                <button
+                    type="button"
+                    class="cp-menu-toggle"
+                    id="cpMenuToggle"
+                >
                     ☰
                 </button>
 
@@ -680,34 +772,54 @@
 
             <div class="cp-topbar-right">
 
-                <div class="cp-date"
-                     id="cpCurrentDate">
+                <div
+                    class="cp-date"
+                    id="cpCurrentDate"
+                >
                 </div>
 
 
                 @php
-                    $nomeUsuario = auth()->user()->name
+
+                    $nomeUsuario =
+                        auth()->user()->name
                         ?? auth()->user()->usuario
                         ?? 'Usuário';
 
-                    $partesNome = preg_split(
-                        '/\s+/',
-                        trim($nomeUsuario)
-                    );
+
+                    $partesNome =
+                        preg_split(
+                            '/\s+/',
+                            trim($nomeUsuario)
+                        );
+
 
                     $iniciais = '';
 
+
                     if (!empty($partesNome[0])) {
+
                         $iniciais .= strtoupper(
-                            substr($partesNome[0], 0, 1)
+                            substr(
+                                $partesNome[0],
+                                0,
+                                1
+                            )
                         );
                     }
 
+
                     if (count($partesNome) > 1) {
+
                         $iniciais .= strtoupper(
-                            substr(end($partesNome), 0, 1)
+                            substr(
+                                end($partesNome),
+                                0,
+                                1
+                            )
                         );
                     }
+
                 @endphp
 
 
@@ -724,14 +836,18 @@
                 </div>
 
 
-                <form method="POST"
-                      action="{{ route('logout') }}"
-                      style="margin:0;">
+                <form
+                    method="POST"
+                    action="{{ route('logout') }}"
+                    style="margin:0;"
+                >
 
                     @csrf
 
-                    <button type="submit"
-                            class="cp-logout">
+                    <button
+                        type="submit"
+                        class="cp-logout"
+                    >
                         Sair
                     </button>
 
@@ -745,23 +861,29 @@
         <main class="cp-content">
 
             @if(session('success'))
+
                 <div class="cp-alert cp-alert-success">
                     {{ session('success') }}
                 </div>
+
             @endif
 
 
             @if(session('error'))
+
                 <div class="cp-alert cp-alert-error">
                     {{ session('error') }}
                 </div>
+
             @endif
 
 
             @if(session('warning'))
+
                 <div class="cp-alert cp-alert-warning">
                     {{ session('warning') }}
                 </div>
+
             @endif
 
 
@@ -775,27 +897,47 @@
 
 
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener(
+    'DOMContentLoaded',
+    function () {
 
         const sidebar =
-            document.getElementById('cpSidebar');
+            document.getElementById(
+                'cpSidebar'
+            );
 
         const overlay =
-            document.getElementById('cpOverlay');
+            document.getElementById(
+                'cpOverlay'
+            );
 
         const toggle =
-            document.getElementById('cpMenuToggle');
+            document.getElementById(
+                'cpMenuToggle'
+            );
 
 
         function abrirMenu() {
-            sidebar.classList.add('open');
-            overlay.classList.add('show');
+
+            sidebar?.classList.add(
+                'open'
+            );
+
+            overlay?.classList.add(
+                'show'
+            );
         }
 
 
         function fecharMenu() {
-            sidebar.classList.remove('open');
-            overlay.classList.remove('show');
+
+            sidebar?.classList.remove(
+                'open'
+            );
+
+            overlay?.classList.remove(
+                'show'
+            );
         }
 
 
@@ -804,10 +946,15 @@
             function () {
 
                 if (
-                    sidebar.classList.contains('open')
+                    sidebar?.classList.contains(
+                        'open'
+                    )
                 ) {
+
                     fecharMenu();
+
                 } else {
+
                     abrirMenu();
                 }
             }
@@ -831,9 +978,12 @@
                 'cpCurrentDate'
             );
 
+
         if (elementoData) {
 
-            const hoje = new Date();
+            const hoje =
+                new Date();
+
 
             elementoData.textContent =
                 hoje.toLocaleDateString(
@@ -845,7 +995,8 @@
                     }
                 );
         }
-    });
+    }
+);
 </script>
 
 @stack('scripts')
