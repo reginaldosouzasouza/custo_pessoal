@@ -248,7 +248,7 @@
         </h1>
 
         <p class="cp-page-subtitle">
-            Controle seus gastos e contas a pagar.
+            Controle seus gastos, registre gastos avulsos e despesas que surgem no dia a dia.”
         </p>
     </div>
 
@@ -332,6 +332,81 @@
     </button>
 
 </form>
+
+
+<div
+    style="
+        display:grid;
+        grid-template-columns:repeat(2, minmax(220px, 1fr));
+        gap:15px;
+        margin-bottom:18px;
+    "
+>
+
+    <div
+        class="cp-card"
+        style="padding:18px;"
+    >
+        <div
+            style="
+                font-size:11px;
+                color:#6b7280;
+                margin-bottom:7px;
+            "
+        >
+            Total exibido
+        </div>
+
+        <div
+            style="
+                font-size:24px;
+                font-weight:700;
+                color:#111827;
+            "
+        >
+            R$
+            {{ number_format(
+                $totalExibido,
+                2,
+                ',',
+                '.'
+            ) }}
+        </div>
+    </div>
+
+
+    <div
+        class="cp-card"
+        style="padding:18px;"
+    >
+        <div
+            style="
+                font-size:11px;
+                color:#6b7280;
+                margin-bottom:7px;
+            "
+        >
+            Total pendente
+        </div>
+
+        <div
+            style="
+                font-size:24px;
+                font-weight:700;
+                color:#dc2626;
+            "
+        >
+            R$
+            {{ number_format(
+                $totalPendente,
+                2,
+                ',',
+                '.'
+            ) }}
+        </div>
+    </div>
+
+</div>
 
 
 <div class="cp-card despesas-card">

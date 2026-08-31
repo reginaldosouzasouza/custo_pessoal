@@ -17,6 +17,7 @@ use App\Http\Controllers\RecorrenciaController;
 use App\Http\Controllers\RelatorioController;
 use App\Http\Controllers\PrevisaoDespesaController;
 use App\Http\Controllers\ParcelamentoController;
+use App\Http\Controllers\RelatorioDespesasController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -296,6 +297,16 @@ Route::middleware('auth')->group(function () {
         '/parcelas/{parcela}/cancelar',
         [ParcelamentoController::class, 'cancelarParcela']
     )->name('parcelas.cancelar');
+
+    Route::get(
+        '/relatorios/despesas',
+        [RelatorioDespesasController::class, 'index']
+    )->name('relatorios.despesas'); 
+
+    Route::get(
+        '/relatorios/despesas/excel',
+        [RelatorioDespesasController::class, 'excel']
+    )->name('relatorios.despesas.excel');
 
 
 });

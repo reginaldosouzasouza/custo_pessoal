@@ -347,6 +347,12 @@ class DespesaController extends Controller
                     ->values();
         }
 
+        $totalExibido = (float) $lancamentos->sum('valor');
+
+        $totalPendente = (float) $lancamentos
+            ->where('situacao', 'pendente')
+            ->sum('valor');
+
 
         /*
         |--------------------------------------------------------------------------
@@ -378,7 +384,9 @@ class DespesaController extends Controller
                 'mes',
                 'situacao',
                 'filtrarPor',
-                'contas'
+                'contas',
+                'totalExibido',
+                'totalPendente',
             )
         );
     }
