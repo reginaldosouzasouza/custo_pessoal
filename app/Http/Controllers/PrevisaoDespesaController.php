@@ -87,19 +87,7 @@ class PrevisaoDespesaController extends Controller
             );
 
 
-        if (
-            Schema::hasColumn(
-                'despesas',
-                'recorrencia_id'
-            )
-        ) {
-
-            $queryDespesas
-                ->whereNull(
-                    'recorrencia_id'
-                );
-        }
-
+        
 
         $despesas =
             $queryDespesas->get();

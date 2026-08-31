@@ -293,18 +293,7 @@ class DashboardController extends Controller
         * Se a despesa nasceu de uma recorrência,
         * ela não entra novamente aqui.
         */
-        if (
-            Schema::hasColumn(
-                'despesas',
-                'recorrencia_id'
-            )
-        ) {
-
-            $queryDespesasProximoMes
-                ->whereNull(
-                    'recorrencia_id'
-                );
-        }
+       
 
 
         $despesasProximoMes =
@@ -522,19 +511,10 @@ class DashboardController extends Controller
             )
             ->where(
                 'situacao',
-                '!=',
-                'cancelada'
+                'pendente'
             );
 
-        if (
-            Schema::hasColumn(
-                'despesas',
-                'recorrencia_id'
-            )
-        ) {
-            $queryDespesasPrevistasMes
-                ->whereNull('recorrencia_id');
-        }
+        
 
         $totalDespesasPrevistasMes =
             (float) $queryDespesasPrevistasMes
