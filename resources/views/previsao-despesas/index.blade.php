@@ -80,7 +80,7 @@
 
     .cards-resumo {
         display:grid;
-        grid-template-columns:repeat(4, 1fr);
+        grid-template-columns:repeat(5, 1fr);
         gap:15px;
         margin-bottom:18px;
     }
@@ -168,6 +168,11 @@
         color:#7653cb;
     }
 
+    .origem-parcela {
+        background:#ede9fe;
+        color:#6d28d9;
+    }
+
     .status {
         display:inline-block;
         padding:4px 8px;
@@ -213,19 +218,14 @@
         color:#6b7280;
     }
 
-    .valor-variavel {
-        font-size:10px;
-        color:#6b7280;
-        margin-top:3px;
-    }
-
-    @media(max-width:950px) {
+    @media(max-width:1050px) {
         .cards-resumo {
-            grid-template-columns:1fr 1fr;
+            grid-template-columns:repeat(2, 1fr);
         }
     }
 
     @media(max-width:600px) {
+
         .filtros-grid {
             grid-template-columns:1fr;
         }
@@ -252,13 +252,15 @@
 <div class="page-header">
 
     <div>
+
         <h1 class="cp-page-title">
-            Previsão de Despesas
+            Previsão de Despesas 
         </h1>
 
         <p class="cp-page-subtitle">
-            Veja os compromissos financeiros previstos para cada mês.
+            Veja os compromissos financeiros detalhados previstos por mês.
         </p>
+
     </div>
 
 </div>
@@ -287,6 +289,7 @@
                 >
 
             </div>
+
 
             <div class="acoes-filtro">
 
@@ -322,6 +325,7 @@
         </div>
 
         <div class="resumo-valor">
+
             R$
             {{ number_format(
                 $totalDespesas,
@@ -329,6 +333,28 @@
                 ',',
                 '.'
             ) }}
+
+        </div>
+
+    </div>
+
+
+    <div class="cp-card resumo-card">
+
+        <div class="resumo-label">
+            Parcelas
+        </div>
+
+        <div class="resumo-valor">
+
+            R$
+            {{ number_format(
+                $totalParcelas,
+                2,
+                ',',
+                '.'
+            ) }}
+
         </div>
 
     </div>
@@ -341,6 +367,7 @@
         </div>
 
         <div class="resumo-valor">
+
             R$
             {{ number_format(
                 $totalRecorrentes,
@@ -348,6 +375,7 @@
                 ',',
                 '.'
             ) }}
+
         </div>
 
     </div>
@@ -360,6 +388,7 @@
         </div>
 
         <div class="resumo-valor">
+
             R$
             {{ number_format(
                 $totalCartoes,
@@ -367,6 +396,7 @@
                 ',',
                 '.'
             ) }}
+
         </div>
 
     </div>
@@ -379,6 +409,7 @@
         </div>
 
         <div class="resumo-valor">
+
             R$
             {{ number_format(
                 $totalPrevisto,
@@ -386,6 +417,7 @@
                 ',',
                 '.'
             ) }}
+
         </div>
 
     </div>
@@ -407,12 +439,14 @@
                     <th>Origem</th>
                     <th>Vencimento</th>
                     <th>Situação</th>
+
                     <th style="text-align:right;">
                         Valor
                     </th>
                 </tr>
 
             </thead>
+
 
             <tbody>
 
@@ -428,6 +462,9 @@
 
                             'recorrente' =>
                                 'origem-recorrente',
+
+                            'parcela' =>
+                                'origem-parcela',
 
                             default =>
                                 'origem-despesa',
@@ -487,7 +524,9 @@
 
 
                         $vencimento =
-                            !empty($item['vencimento'])
+                            !empty(
+                                $item['vencimento']
+                            )
                                 ? \Carbon\Carbon::parse(
                                     $item['vencimento']
                                 )->format('d/m/Y')
@@ -499,9 +538,11 @@
                     <tr>
 
                         <td>
+
                             <strong>
                                 {{ $item['descricao'] }}
                             </strong>
+
                         </td>
 
 

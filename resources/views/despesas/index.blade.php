@@ -17,16 +17,11 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-
         padding: 10px 16px;
-
         border-radius: 8px;
-
         background: #0d6efd;
         color: #fff;
-
         text-decoration: none;
-
         font-size: 14px;
         font-weight: 600;
     }
@@ -34,18 +29,9 @@
     .filtros {
         padding: 16px;
         margin-bottom: 18px;
-
         display: flex;
         gap: 10px;
         flex-wrap: wrap;
-        align-items: end;
-    }
-
-    .filtros-grid {
-        display: grid;
-        grid-template-columns:
-            170px 180px 160px auto;
-        gap: 12px;
         align-items: end;
     }
 
@@ -62,30 +48,21 @@
 
     .filtro-control {
         height: 36px;
-
         border: 1px solid #d9dee5;
         border-radius: 7px;
-
         padding: 0 9px;
-
         background: #fff;
-
         font-size: 12px;
     }
 
     .btn-filtrar {
         height: 36px;
-
         border: none;
         border-radius: 7px;
-
         padding: 0 14px;
-
         background: #374151;
         color: #fff;
-
         cursor: pointer;
-
         font-size: 12px;
     }
 
@@ -97,18 +74,14 @@
     .despesas-table {
         width: 100%;
         min-width: 950px;
-
         border-collapse: collapse;
-
         font-size: 12px;
     }
 
     .despesas-table th,
     .despesas-table td {
         padding: 11px 9px;
-
         border-bottom: 1px solid #edf0f3;
-
         text-align: left;
     }
 
@@ -124,11 +97,8 @@
 
     .status {
         display: inline-block;
-
         padding: 4px 8px;
-
         border-radius: 999px;
-
         font-size: 10px;
         font-weight: 600;
     }
@@ -155,30 +125,33 @@
 
     .essencial {
         display: inline-block;
-
         padding: 3px 7px;
-
         border-radius: 999px;
-
         font-size: 9px;
         font-weight: 600;
-
         background: #e0f2fe;
         color: #075985;
     }
 
     .nao-essencial {
         display: inline-block;
-
         padding: 3px 7px;
-
         border-radius: 999px;
-
         font-size: 9px;
         font-weight: 600;
-
         background: #f3f4f6;
         color: #6b7280;
+    }
+
+    .badge-parcelada {
+        display: inline-block;
+        margin-left: 5px;
+        padding: 2px 6px;
+        border-radius: 999px;
+        background: #ede9fe;
+        color: #6d28d9;
+        font-size: 9px;
+        font-weight: 600;
     }
 
     .acoes {
@@ -191,21 +164,14 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-
         min-height: 30px;
-
         padding: 0 9px;
-
         border: 1px solid #dfe3e8;
         border-radius: 6px;
-
         background: #fff;
         color: #374151;
-
         text-decoration: none;
-
         font-size: 10px;
-
         cursor: pointer;
     }
 
@@ -229,11 +195,8 @@
         border: none;
         border-radius: 12px;
         padding: 22px;
-
         width: min(420px, calc(100% - 30px));
-
-        box-shadow:
-            0 15px 50px rgba(0,0,0,.25);
+        box-shadow: 0 15px 50px rgba(0,0,0,.25);
     }
 
     dialog::backdrop {
@@ -254,10 +217,8 @@
 
     .dialog-control {
         min-height: 39px;
-
         border: 1px solid #d9dee5;
         border-radius: 7px;
-
         padding: 7px 9px;
     }
 
@@ -265,7 +226,6 @@
         display: flex;
         justify-content: flex-end;
         gap: 8px;
-
         margin-top: 18px;
     }
 
@@ -274,19 +234,6 @@
             width: 100%;
         }
     }
-
-    @media(max-width: 900px) {
-        .filtros-grid {
-            grid-template-columns: 1fr 1fr;
-        }
-    }
-
-    @media(max-width: 600px) {
-        .filtros-grid {
-            grid-template-columns: 1fr;
-        }
-    }
-
 </style>
 @endpush
 
@@ -296,7 +243,6 @@
 <div class="despesas-header">
 
     <div>
-
         <h1 class="cp-page-title">
             Despesas
         </h1>
@@ -304,9 +250,7 @@
         <p class="cp-page-subtitle">
             Controle seus gastos e contas a pagar.
         </p>
-
     </div>
-
 
     <a
         href="{{ route('despesas.create') }}"
@@ -356,27 +300,21 @@
 
             <option
                 value="pendente"
-                @selected(
-                    request('situacao') === 'pendente'
-                )
+                @selected(request('situacao') === 'pendente')
             >
                 Pendente
             </option>
 
             <option
                 value="paga"
-                @selected(
-                    request('situacao') === 'paga'
-                )
+                @selected(request('situacao') === 'paga')
             >
                 Paga
             </option>
 
             <option
                 value="cancelada"
-                @selected(
-                    request('situacao') === 'cancelada'
-                )
+                @selected(request('situacao') === 'cancelada')
             >
                 Cancelada
             </option>
@@ -401,7 +339,6 @@
     <table class="despesas-table">
 
         <thead>
-
             <tr>
                 <th>Descrição</th>
                 <th>Categoria</th>
@@ -413,54 +350,67 @@
                 <th>Situação</th>
                 <th>Ações</th>
             </tr>
-
         </thead>
 
 
         <tbody>
 
-        @forelse($despesas as $despesa)
+        @forelse($lancamentos as $item)
 
             @php
+
                 $atrasada =
-                    $despesa->situacao === 'pendente'
-                    && $despesa->data_vencimento->isPast()
-                    && !$despesa->data_vencimento->isToday();
+                    $item['situacao'] === 'pendente'
+                    && $item['data_vencimento']->isPast()
+                    && !$item['data_vencimento']->isToday();
+
+                $ehParcela =
+                    $item['tipo'] === 'parcela';
+
+                $model =
+                    $item['model'];
+
             @endphp
 
 
             <tr>
 
                 <td>
-                    {{ $despesa->descricao }}
+
+                    {{ $item['descricao'] }}
+
+                    @if($ehParcela)
+
+                        <span class="badge-parcelada">
+                            Parcelada
+                        </span>
+
+                    @endif
+
                 </td>
 
 
                 <td>
-                    {{ $despesa->categoria?->nome ?? '-' }}
+                    {{ $item['categoria'] }}
                 </td>
 
 
                 <td>
-                    {{ $despesa
-                        ->data_vencimento
-                        ->format('d/m/Y') }}
+                    {{ $item['data_vencimento']->format('d/m/Y') }}
                 </td>
 
 
                 <td>
 
-                    {{ $despesa->data_pagamento
-                        ? $despesa
-                            ->data_pagamento
-                            ->format('d/m/Y')
+                    {{ $item['data_pagamento']
+                        ? $item['data_pagamento']->format('d/m/Y')
                         : '-' }}
 
                 </td>
 
 
                 <td>
-                    {{ $despesa->conta?->nome ?? '-' }}
+                    {{ $item['conta'] }}
                 </td>
 
 
@@ -468,7 +418,7 @@
 
                     R$
                     {{ number_format(
-                        $despesa->valor,
+                        $item['valor'],
                         2,
                         ',',
                         '.'
@@ -479,7 +429,7 @@
 
                 <td>
 
-                    @if($despesa->essencial)
+                    @if($item['essencial'])
 
                         <span class="essencial">
                             Essencial
@@ -498,15 +448,13 @@
 
                 <td>
 
-                    @if($despesa->situacao === 'paga')
+                    @if($item['situacao'] === 'paga')
 
                         <span class="status status-paga">
                             Paga
                         </span>
 
-                    @elseif(
-                        $despesa->situacao === 'cancelada'
-                    )
+                    @elseif($item['situacao'] === 'cancelada')
 
                         <span class="status status-cancelada">
                             Cancelada
@@ -533,12 +481,16 @@
 
                     <div class="acoes">
 
-                        @if($despesa->situacao === 'pendente')
+                        {{-- DESPESA NORMAL --}}
+                        @if(
+                            !$ehParcela
+                            && $item['situacao'] === 'pendente'
+                        )
 
                             <a
                                 href="{{ route(
                                     'despesas.edit',
-                                    $despesa
+                                    $model
                                 ) }}"
                                 class="btn-acao"
                             >
@@ -552,7 +504,7 @@
                                 onclick="
                                     document
                                         .getElementById(
-                                            'pagar-{{ $despesa->id }}'
+                                            'pagar-despesa-{{ $model->id }}'
                                         )
                                         .showModal()
                                 "
@@ -565,7 +517,7 @@
                                 method="POST"
                                 action="{{ route(
                                     'despesas.cancelar',
-                                    $despesa
+                                    $model
                                 ) }}"
                                 style="margin:0;"
                                 onsubmit="
@@ -590,6 +542,58 @@
 
                         @endif
 
+
+                        {{-- PARCELA --}}
+                        @if(
+                            $ehParcela
+                            && $item['situacao'] === 'pendente'
+                        )
+
+                            <button
+                                type="button"
+                                class="btn-acao btn-pagar"
+                                onclick="
+                                    document
+                                        .getElementById(
+                                            'pagar-parcela-{{ $model->id }}'
+                                        )
+                                        .showModal()
+                                "
+                            >
+                                Pagar
+                            </button>
+
+
+                            <form
+                                method="POST"
+                                action="{{ route(
+                                    'parcelas.cancelar',
+                                    $model
+                                ) }}"
+                                style="margin:0;"
+                                onsubmit="
+                                    return confirm(
+                                        'Deseja cancelar somente esta parcela?'
+                                    );
+                                "
+                            >
+                                @csrf
+
+                                <button
+                                    type="submit"
+                                    class="
+                                        btn-acao
+                                        btn-cancelar-despesa
+                                    "
+                                >
+                                    Cancelar
+                                </button>
+
+                            </form>
+
+                        @endif
+                        
+
                     </div>
 
                 </td>
@@ -597,17 +601,24 @@
             </tr>
 
 
-            @if($despesa->situacao === 'pendente')
+            {{-- ========================================================= --}}
+            {{-- MODAL: DESPESA NORMAL --}}
+            {{-- ========================================================= --}}
+
+            @if(
+                !$ehParcela
+                && $item['situacao'] === 'pendente'
+            )
 
                 <dialog
-                    id="pagar-{{ $despesa->id }}"
+                    id="pagar-despesa-{{ $model->id }}"
                 >
 
                     <form
                         method="POST"
                         action="{{ route(
                             'despesas.pagar',
-                            $despesa
+                            $model
                         ) }}"
                     >
                         @csrf
@@ -619,21 +630,25 @@
 
 
                         <p>
-                            {{ $despesa->descricao }}
+                            {{ $item['descricao'] }}
                         </p>
 
 
-                        <p style="
-                            font-weight:700;
-                            color:#dc2626;
-                        ">
+                        <p
+                            style="
+                                font-weight:700;
+                                color:#dc2626;
+                            "
+                        >
+
                             R$
                             {{ number_format(
-                                $despesa->valor,
+                                $item['valor'],
                                 2,
                                 ',',
                                 '.'
                             ) }}
+
                         </p>
 
 
@@ -653,20 +668,7 @@
                                     Selecione
                                 </option>
 
-                                @foreach(
-                                    \App\Models\Conta::query()
-                                        ->where(
-                                            'user_id',
-                                            auth()->id()
-                                        )
-                                        ->where(
-                                            'ativa',
-                                            true
-                                        )
-                                        ->orderBy('nome')
-                                        ->get()
-                                    as $conta
-                                )
+                                @foreach($contas as $conta)
 
                                     <option
                                         value="{{ $conta->id }}"
@@ -728,17 +730,150 @@
 
             @endif
 
+
+            {{-- ========================================================= --}}
+            {{-- MODAL: PARCELA --}}
+            {{-- ========================================================= --}}
+
+            @if(
+                $ehParcela
+                && $item['situacao'] === 'pendente'
+            )
+
+                <dialog
+                    id="pagar-parcela-{{ $model->id }}"
+                >
+
+                    <form
+                        method="POST"
+                        action="{{ route(
+                            'parcelas.pagar',
+                            $model
+                        ) }}"
+                    >
+                        @csrf
+
+
+                        <h3 style="margin-top:0;">
+                            Pagar parcela
+                        </h3>
+
+
+                        <p>
+                            {{ $item['descricao'] }}
+                        </p>
+
+
+                        <p
+                            style="
+                                font-weight:700;
+                                color:#dc2626;
+                            "
+                        >
+
+                            R$
+                            {{ number_format(
+                                $item['valor'],
+                                2,
+                                ',',
+                                '.'
+                            ) }}
+
+                        </p>
+
+
+                        <div class="dialog-group">
+
+                            <label>
+                                Conta utilizada
+                            </label>
+
+                            <select
+                                name="conta_id"
+                                class="dialog-control"
+                                required
+                            >
+
+                                <option value="">
+                                    Selecione
+                                </option>
+
+                                @foreach($contas as $conta)
+
+                                    <option
+                                        value="{{ $conta->id }}"
+                                        @selected(
+                                            $model->conta_id
+                                            == $conta->id
+                                        )
+                                    >
+                                        {{ $conta->nome }}
+                                    </option>
+
+                                @endforeach
+
+                            </select>
+
+                        </div>
+
+
+                        <div class="dialog-group">
+
+                            <label>
+                                Data do pagamento
+                            </label>
+
+                            <input
+                                type="date"
+                                name="data_pagamento"
+                                class="dialog-control"
+                                value="{{ now()->format('Y-m-d') }}"
+                                required
+                            >
+
+                        </div>
+
+
+                        <div class="dialog-actions">
+
+                            <button
+                                type="button"
+                                class="btn-acao"
+                                onclick="
+                                    this
+                                        .closest('dialog')
+                                        .close()
+                                "
+                            >
+                                Voltar
+                            </button>
+
+
+                            <button
+                                type="submit"
+                                class="btn-acao btn-pagar"
+                            >
+                                Confirmar pagamento
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                </dialog>
+
+            @endif
+
+
         @empty
 
             <tr>
-
                 <td
                     colspan="9"
                     class="empty"
                 >
                     Nenhuma despesa cadastrada.
                 </td>
-
             </tr>
 
         @endforelse

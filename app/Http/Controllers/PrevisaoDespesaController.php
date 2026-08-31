@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Despesa;
 use App\Models\Fatura;
+use App\Models\Parcela;
 use App\Models\Recorrencia;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -28,17 +29,21 @@ class PrevisaoDespesaController extends Controller
         );
 
         try {
+
             $inicioMes = Carbon::createFromFormat(
-                'Y-m',
-                $mes
+                'Y-m-d',
+                $mes . '-01'
             )->startOfMonth();
 
         } catch (\Throwable $e) {
 
-            $inicioMes = now()->startOfMonth();
+            $inicioMes = now()
+                ->startOfMonth();
 
-            $mes = $inicioMes->format('Y-m');
+            $mes = $inicioMes
+                ->format('Y-m');
         }
+
 
         $fimMes = $inicioMes
             ->copy()
@@ -58,13 +63,6 @@ class PrevisaoDespesaController extends Controller
         |--------------------------------------------------------------------------
         | 1. DESPESAS JÁ LANÇADAS
         |--------------------------------------------------------------------------
-        |
-        | Entram despesas com vencimento no mês.
-        |
-        | Se a tabela possuir recorrencia_id,
-        | excluímos despesas originadas de recorrência
-        | para evitar contagem duplicada.
-        |
         */
 
         $queryDespesas = Despesa::query()
@@ -72,7 +70,10 @@ class PrevisaoDespesaController extends Controller
                 'categoria',
                 'conta',
             ])
-            ->where('user_id', $userId)
+            ->where(
+                'user_id',
+                $userId
+            )
             ->whereBetween(
                 'data_vencimento',
                 [
@@ -82,9 +83,9 @@ class PrevisaoDespesaController extends Controller
             )
             ->where(
                 'situacao',
-                '!=',
-                'cancelada'
+                'pendente'
             );
+
 
         if (
             Schema::hasColumn(
@@ -92,16 +93,22 @@ class PrevisaoDespesaController extends Controller
                 'recorrencia_id'
             )
         ) {
+
             $queryDespesas
-                ->whereNull('recorrencia_id');
+                ->whereNull(
+                    'recorrencia_id'
+                );
         }
 
-        $despesas = $queryDespesas->get();
+
+        $despesas =
+            $queryDespesas->get();
 
 
         foreach ($despesas as $despesa) {
 
             $itens->push([
+
                 'tipo' =>
                     'despesa',
 
@@ -112,16 +119,20 @@ class PrevisaoDespesaController extends Controller
                     $despesa->descricao,
 
                 'categoria' =>
-                    $despesa->categoria?->nome ?? '-',
+                    $despesa
+                        ->categoria?->nome
+                    ?? '-',
 
                 'vencimento' =>
-                    $despesa->data_vencimento,
+                    $despesa
+                        ->data_vencimento,
 
                 'situacao' =>
                     $despesa->situacao,
 
                 'valor' =>
-                    (float) $despesa->valor,
+                    (float)
+                    $despesa->valor,
 
                 'id' =>
                     $despesa->id,
@@ -131,50 +142,145 @@ class PrevisaoDespesaController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | 2. DESPESAS RECORRENTES
+        | 2. PARCELAS
+        |--------------------------------------------------------------------------
+        */
+
+        $parcelas = Parcela::query()
+            ->with([
+                'parcelamento.categoria',
+                'conta',
+            ])
+            ->where(
+                'user_id',
+                $userId
+            )
+            ->whereBetween(
+                'data_vencimento',
+                [
+                    $inicioMes->toDateString(),
+                    $fimMes->toDateString(),
+                ]
+            )
+            ->where(
+                'situacao',
+                'pendente'
+            )
+            ->get();
+
+
+        foreach ($parcelas as $parcela) {
+
+            $parcelamento =
+                $parcela->parcelamento;
+
+            $categoria =
+                $parcelamento?->categoria;
+
+
+            $itens->push([
+
+                'tipo' =>
+                    'parcela',
+
+                'origem' =>
+                    'Parcela',
+
+                'descricao' =>
+                    (
+                        $parcelamento?->descricao
+                        ?? 'Parcelamento'
+                    )
+                    . ' - '
+                    . $parcela->numero_parcela
+                    . '/'
+                    . $parcela->total_parcelas,
+
+                'categoria' =>
+                    $categoria?->nome
+                    ?? '-',
+
+                'vencimento' =>
+                    $parcela
+                        ->data_vencimento,
+
+                'situacao' =>
+                    $parcela->situacao,
+
+                'valor' =>
+                    (float)
+                    $parcela->valor,
+
+                'id' =>
+                    $parcela->id,
+            ]);
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | 3. DESPESAS RECORRENTES
         |--------------------------------------------------------------------------
         */
 
         $recorrencias = Recorrencia::query()
             ->with('categoria')
-            ->where('user_id', $userId)
-            ->where('tipo', 'despesa')
-            ->where('ativa', true)
+            ->where(
+                'user_id',
+                $userId
+            )
+            ->where(
+                'tipo',
+                'despesa'
+            )
+            ->where(
+                'ativa',
+                true
+            )
             ->whereDate(
                 'data_inicio',
                 '<=',
                 $fimMes->toDateString()
             )
-            ->where(function ($query) use ($inicioMes) {
+            ->where(
+                function ($query) use (
+                    $inicioMes
+                ) {
 
-                $query
-                    ->whereNull('data_fim')
-                    ->orWhereDate(
-                        'data_fim',
-                        '>=',
-                        $inicioMes->toDateString()
-                    );
-            })
+                    $query
+                        ->whereNull(
+                            'data_fim'
+                        )
+                        ->orWhereDate(
+                            'data_fim',
+                            '>=',
+                            $inicioMes
+                                ->toDateString()
+                        );
+                }
+            )
             ->get();
 
 
-        foreach ($recorrencias as $recorrencia) {
+        foreach (
+            $recorrencias
+            as $recorrencia
+        ) {
 
             $vencimentos =
-                $this->vencimentosDaRecorrenciaNoMes(
-                    $recorrencia,
-                    $inicioMes,
-                    $fimMes
-                );
+                $this
+                    ->vencimentosDaRecorrenciaNoMes(
+                        $recorrencia,
+                        $inicioMes,
+                        $fimMes
+                    );
 
 
-            foreach ($vencimentos as $vencimento) {
+            foreach (
+                $vencimentos
+                as $vencimento
+            ) {
 
-                /*
-                 * Se existir uma despesa gerada pela própria
-                 * recorrência para esse vencimento, não projetamos
-                 * novamente.
-                 */
                 if (
                     Schema::hasColumn(
                         'despesas',
@@ -182,22 +288,28 @@ class PrevisaoDespesaController extends Controller
                     )
                 ) {
 
-                    $jaGerada = Despesa::query()
-                        ->where('user_id', $userId)
-                        ->where(
-                            'recorrencia_id',
-                            $recorrencia->id
-                        )
-                        ->whereDate(
-                            'data_vencimento',
-                            $vencimento->toDateString()
-                        )
-                        ->where(
-                            'situacao',
-                            '!=',
-                            'cancelada'
-                        )
-                        ->exists();
+                    $jaGerada =
+                        Despesa::query()
+                            ->where(
+                                'user_id',
+                                $userId
+                            )
+                            ->where(
+                                'recorrencia_id',
+                                $recorrencia->id
+                            )
+                            ->whereDate(
+                                'data_vencimento',
+                                $vencimento
+                                    ->toDateString()
+                            )
+                            ->where(
+                                'situacao',
+                                '!=',
+                                'cancelada'
+                            )
+                            ->exists();
+
 
                     if ($jaGerada) {
                         continue;
@@ -206,6 +318,7 @@ class PrevisaoDespesaController extends Controller
 
 
                 $itens->push([
+
                     'tipo' =>
                         'recorrente',
 
@@ -213,10 +326,12 @@ class PrevisaoDespesaController extends Controller
                         'Recorrente',
 
                     'descricao' =>
-                        $recorrencia->descricao,
+                        $recorrencia
+                            ->descricao,
 
                     'categoria' =>
-                        $recorrencia->categoria?->nome
+                        $recorrencia
+                            ->categoria?->nome
                         ?? '-',
 
                     'vencimento' =>
@@ -227,12 +342,14 @@ class PrevisaoDespesaController extends Controller
 
                     'valor' =>
                         (float) (
-                            $recorrencia->valor_padrao
+                            $recorrencia
+                                ->valor_padrao
                             ?? 0
                         ),
 
                     'tipo_valor' =>
-                        $recorrencia->tipo_valor,
+                        $recorrencia
+                            ->tipo_valor,
 
                     'id' =>
                         $recorrencia->id,
@@ -243,18 +360,16 @@ class PrevisaoDespesaController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | 3. FATURAS DOS CARTÕES
+        | 4. FATURAS DOS CARTÕES
         |--------------------------------------------------------------------------
-        |
-        | Aqui entra somente a FATURA.
-        | As compras do cartão não são somadas separadamente,
-        | evitando duplicidade.
-        |
         */
 
         $faturas = Fatura::query()
             ->with('cartao')
-            ->where('user_id', $userId)
+            ->where(
+                'user_id',
+                $userId
+            )
             ->whereBetween(
                 'data_vencimento',
                 [
@@ -267,16 +382,13 @@ class PrevisaoDespesaController extends Controller
 
         foreach ($faturas as $fatura) {
 
-            /*
-             * Para fatura paga mostramos o valor efetivamente
-             * comprometido naquele mês.
-             *
-             * Para fatura não paga usamos o valor total atual.
-             */
+            $valor =
+                (float)
+                $fatura->valor_total;
 
-            $valor = (float) $fatura->valor_total;
 
             $itens->push([
+
                 'tipo' =>
                     'cartao',
 
@@ -286,7 +398,8 @@ class PrevisaoDespesaController extends Controller
                 'descricao' =>
                     'Fatura '
                     . (
-                        $fatura->cartao?->nome
+                        $fatura
+                            ->cartao?->nome
                         ?? 'Cartão'
                     ),
 
@@ -294,7 +407,8 @@ class PrevisaoDespesaController extends Controller
                     'Cartão de crédito',
 
                 'vencimento' =>
-                    $fatura->data_vencimento,
+                    $fatura
+                        ->data_vencimento,
 
                 'situacao' =>
                     $fatura->situacao,
@@ -315,18 +429,24 @@ class PrevisaoDespesaController extends Controller
         */
 
         $itens = $itens
-            ->sortBy(function ($item) {
+            ->sortBy(
+                function ($item) {
 
-                if (
-                    empty($item['vencimento'])
-                ) {
-                    return '9999-12-31';
+                    if (
+                        empty(
+                            $item['vencimento']
+                        )
+                    ) {
+                        return '9999-12-31';
+                    }
+
+                    return Carbon::parse(
+                        $item['vencimento']
+                    )->format(
+                        'Y-m-d'
+                    );
                 }
-
-                return Carbon::parse(
-                    $item['vencimento']
-                )->format('Y-m-d');
-            })
+            )
             ->values();
 
 
@@ -336,20 +456,45 @@ class PrevisaoDespesaController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        $totalDespesas = $itens
-            ->where('tipo', 'despesa')
-            ->sum('valor');
+        $totalDespesas =
+            $itens
+                ->where(
+                    'tipo',
+                    'despesa'
+                )
+                ->sum('valor');
 
-        $totalRecorrentes = $itens
-            ->where('tipo', 'recorrente')
-            ->sum('valor');
 
-        $totalCartoes = $itens
-            ->where('tipo', 'cartao')
-            ->sum('valor');
+        $totalParcelas =
+            $itens
+                ->where(
+                    'tipo',
+                    'parcela'
+                )
+                ->sum('valor');
+
+
+        $totalRecorrentes =
+            $itens
+                ->where(
+                    'tipo',
+                    'recorrente'
+                )
+                ->sum('valor');
+
+
+        $totalCartoes =
+            $itens
+                ->where(
+                    'tipo',
+                    'cartao'
+                )
+                ->sum('valor');
+
 
         $totalPrevisto =
             $totalDespesas
+            + $totalParcelas
             + $totalRecorrentes
             + $totalCartoes;
 
@@ -362,6 +507,7 @@ class PrevisaoDespesaController extends Controller
                 'fimMes',
                 'itens',
                 'totalDespesas',
+                'totalParcelas',
                 'totalRecorrentes',
                 'totalCartoes',
                 'totalPrevisto'
@@ -372,7 +518,7 @@ class PrevisaoDespesaController extends Controller
 
     /*
     |--------------------------------------------------------------------------
-    | CALCULA OS VENCIMENTOS DA RECORRÊNCIA NO MÊS
+    | VENCIMENTOS DA RECORRÊNCIA
     |--------------------------------------------------------------------------
     */
 
@@ -382,17 +528,22 @@ class PrevisaoDespesaController extends Controller
         Carbon $fimMes
     ): Collection {
 
-        $resultado = collect();
+        $resultado =
+            collect();
+
 
         $inicioRecorrencia =
             Carbon::parse(
-                $recorrencia->data_inicio
+                $recorrencia
+                    ->data_inicio
             )->startOfDay();
+
 
         $fimRecorrencia =
             $recorrencia->data_fim
                 ? Carbon::parse(
-                    $recorrencia->data_fim
+                    $recorrencia
+                        ->data_fim
                 )->endOfDay()
                 : null;
 
@@ -401,36 +552,51 @@ class PrevisaoDespesaController extends Controller
         |--------------------------------------------------------------------------
         | SEMANAL
         |--------------------------------------------------------------------------
-        |
-        | Usa data_inicio como referência e repete
-        | de 7 em 7 dias.
-        |
         */
 
         if (
-            $recorrencia->frequencia
+            $recorrencia
+                ->frequencia
             === 'semanal'
         ) {
 
-            $data = $inicioRecorrencia->copy();
+            $data =
+                $inicioRecorrencia
+                    ->copy();
 
-            while ($data->lt($inicioMes)) {
+
+            while (
+                $data->lt(
+                    $inicioMes
+                )
+            ) {
                 $data->addWeek();
             }
 
-            while ($data->lte($fimMes)) {
+
+            while (
+                $data->lte(
+                    $fimMes
+                )
+            ) {
 
                 if (
                     !$fimRecorrencia
-                    || $data->lte($fimRecorrencia)
+                    ||
+                    $data->lte(
+                        $fimRecorrencia
+                    )
                 ) {
+
                     $resultado->push(
                         $data->copy()
                     );
                 }
 
+
                 $data->addWeek();
             }
+
 
             return $resultado;
         }
@@ -438,18 +604,28 @@ class PrevisaoDespesaController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | MENSAL / TRIMESTRAL / SEMESTRAL / ANUAL
+        | OUTRAS FREQUÊNCIAS
         |--------------------------------------------------------------------------
         */
 
         $intervaloMeses = match (
-            $recorrencia->frequencia
+            $recorrencia
+                ->frequencia
         ) {
-            'mensal' => 1,
-            'trimestral' => 3,
-            'semestral' => 6,
-            'anual' => 12,
-            default => null,
+            'mensal' =>
+                1,
+
+            'trimestral' =>
+                3,
+
+            'semestral' =>
+                6,
+
+            'anual' =>
+                12,
+
+            default =>
+                null,
         };
 
 
@@ -458,23 +634,23 @@ class PrevisaoDespesaController extends Controller
         }
 
 
-        /*
-         * Verifica se o mês pesquisado corresponde
-         * a uma ocorrência da recorrência.
-         */
+        $mesInicio =
+            $inicioRecorrencia
+                ->copy()
+                ->startOfMonth();
 
-        $mesInicio = $inicioRecorrencia
-            ->copy()
-            ->startOfMonth();
 
         $diferencaMeses =
-            $mesInicio->diffInMonths(
-                $inicioMes,
-                false
-            );
+            $mesInicio
+                ->diffInMonths(
+                    $inicioMes,
+                    false
+                );
 
 
-        if ($diferencaMeses < 0) {
+        if (
+            $diferencaMeses < 0
+        ) {
             return $resultado;
         }
 
@@ -488,35 +664,27 @@ class PrevisaoDespesaController extends Controller
         }
 
 
-        /*
-         * Dia do vencimento.
-         *
-         * Exemplo:
-         * dia 31 em fevereiro vira o último
-         * dia disponível daquele mês.
-         */
-
         $dia =
             (int) (
-                $recorrencia->dia_vencimento
-                ?: $inicioRecorrencia->day
+                $recorrencia
+                    ->dia_vencimento
+                ?: $inicioRecorrencia
+                    ->day
             );
+
 
         $dia = min(
             $dia,
-            $inicioMes->daysInMonth
+            $inicioMes
+                ->daysInMonth
         );
 
 
-        $vencimento = $inicioMes
-            ->copy()
-            ->day($dia);
+        $vencimento =
+            $inicioMes
+                ->copy()
+                ->day($dia);
 
-
-        /*
-         * Não pode acontecer antes do início
-         * ou depois do fim da recorrência.
-         */
 
         if (
             $vencimento->lt(
@@ -529,7 +697,8 @@ class PrevisaoDespesaController extends Controller
 
         if (
             $fimRecorrencia
-            && $vencimento->gt(
+            &&
+            $vencimento->gt(
                 $fimRecorrencia
             )
         ) {
@@ -540,6 +709,7 @@ class PrevisaoDespesaController extends Controller
         $resultado->push(
             $vencimento
         );
+
 
         return $resultado;
     }

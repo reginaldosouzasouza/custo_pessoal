@@ -7,6 +7,7 @@ use App\Models\Conta;
 use App\Models\Despesa;
 use App\Models\FormaPagamento;
 use App\Models\MovimentacaoConta;
+use App\Models\Parcela;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -17,7 +18,6 @@ class DespesaController extends Controller
         $userId = auth()->id();
 
         $mes = $request->input('mes');
-
         $situacao = $request->input('situacao');
 
         $filtrarPor = $request->input(
@@ -25,7 +25,14 @@ class DespesaController extends Controller
             'vencimento'
         );
 
-        $query = Despesa::query()
+
+        /*
+        |--------------------------------------------------------------------------
+        | DESPESAS NORMAIS
+        |--------------------------------------------------------------------------
+        */
+
+        $queryDespesas = Despesa::query()
             ->with([
                 'categoria',
                 'conta',
@@ -33,18 +40,6 @@ class DespesaController extends Controller
             ])
             ->where('user_id', $userId);
 
-
-        /*
-        |--------------------------------------------------------------------------
-        | FILTRO POR MÊS
-        |--------------------------------------------------------------------------
-        |
-        | O usuário pode escolher:
-        |
-        | - vencimento
-        | - pagamento
-        |
-        */
 
         if ($mes) {
 
@@ -55,7 +50,7 @@ class DespesaController extends Controller
 
             if ($filtrarPor === 'pagamento') {
 
-                $query
+                $queryDespesas
                     ->whereNotNull('data_pagamento')
                     ->whereYear(
                         'data_pagamento',
@@ -68,7 +63,7 @@ class DespesaController extends Controller
 
             } else {
 
-                $query
+                $queryDespesas
                     ->whereYear(
                         'data_vencimento',
                         $ano
@@ -81,11 +76,77 @@ class DespesaController extends Controller
         }
 
 
+        if (
+            in_array(
+                $situacao,
+                [
+                    'pendente',
+                    'paga',
+                    'cancelada',
+                ],
+                true
+            )
+        ) {
+            $queryDespesas->where(
+                'situacao',
+                $situacao
+            );
+        }
+
+
+        $despesasNormais =
+            $queryDespesas->get();
+
+
         /*
         |--------------------------------------------------------------------------
-        | SITUAÇÃO
+        | PARCELAS
         |--------------------------------------------------------------------------
         */
+
+        $queryParcelas = Parcela::query()
+            ->with([
+                'parcelamento.categoria',
+                'conta',
+                'formaPagamento',
+            ])
+            ->where('user_id', $userId);
+
+
+        if ($mes) {
+
+            [$ano, $numeroMes] = explode(
+                '-',
+                $mes
+            );
+
+            if ($filtrarPor === 'pagamento') {
+
+                $queryParcelas
+                    ->whereNotNull('data_pagamento')
+                    ->whereYear(
+                        'data_pagamento',
+                        $ano
+                    )
+                    ->whereMonth(
+                        'data_pagamento',
+                        $numeroMes
+                    );
+
+            } else {
+
+                $queryParcelas
+                    ->whereYear(
+                        'data_vencimento',
+                        $ano
+                    )
+                    ->whereMonth(
+                        'data_vencimento',
+                        $numeroMes
+                    );
+            }
+        }
+
 
         if (
             in_array(
@@ -98,30 +159,226 @@ class DespesaController extends Controller
                 true
             )
         ) {
-            $query->where(
+            $queryParcelas->where(
                 'situacao',
                 $situacao
             );
         }
 
 
-        $despesas = $query
-            ->orderByDesc(
-                $filtrarPor === 'pagamento'
-                    ? 'data_pagamento'
-                    : 'data_vencimento'
+        $parcelas =
+            $queryParcelas->get();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | LISTA ÚNICA
+        |--------------------------------------------------------------------------
+        */
+
+        $lancamentos =
+            collect();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | DESPESAS NORMAIS
+        |--------------------------------------------------------------------------
+        */
+
+        foreach (
+            $despesasNormais
+            as $despesa
+        ) {
+
+            $lancamentos->push([
+
+                'tipo' =>
+                    'despesa',
+
+                'id' =>
+                    $despesa->id,
+
+                'descricao' =>
+                    $despesa->descricao,
+
+                'categoria' =>
+                    $despesa
+                        ->categoria?->nome
+                    ?? '-',
+
+                'data_vencimento' =>
+                    $despesa
+                        ->data_vencimento,
+
+                'data_pagamento' =>
+                    $despesa
+                        ->data_pagamento,
+
+                'conta' =>
+                    $despesa
+                        ->conta?->nome
+                    ?? '-',
+
+                'valor' =>
+                    $despesa->valor,
+
+                'essencial' =>
+                    (bool)
+                    $despesa->essencial,
+
+                'situacao' =>
+                    $despesa->situacao,
+
+                'model' =>
+                    $despesa,
+            ]);
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | PARCELAS
+        |--------------------------------------------------------------------------
+        */
+
+        foreach (
+            $parcelas
+            as $parcela
+        ) {
+
+            $parcelamento =
+                $parcela->parcelamento;
+
+            $categoria =
+                $parcelamento?->categoria;
+
+
+            $lancamentos->push([
+
+                'tipo' =>
+                    'parcela',
+
+                'id' =>
+                    $parcela->id,
+
+                'descricao' =>
+                    (
+                        $parcelamento?->descricao
+                        ?? 'Parcelamento'
+                    )
+                    . ' - '
+                    . $parcela->numero_parcela
+                    . '/'
+                    . $parcela->total_parcelas,
+
+                'categoria' =>
+                    $categoria?->nome
+                    ?? '-',
+
+                'data_vencimento' =>
+                    $parcela
+                        ->data_vencimento,
+
+                'data_pagamento' =>
+                    $parcela
+                        ->data_pagamento,
+
+                'conta' =>
+                    $parcela
+                        ->conta?->nome
+                    ?? '-',
+
+                'valor' =>
+                    $parcela->valor,
+
+                'essencial' =>
+                    $categoria?->classificacao
+                    === 'essencial',
+
+                'situacao' =>
+                    $parcela->situacao,
+
+                'model' =>
+                    $parcela,
+            ]);
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | ORDENA
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            $filtrarPor
+            === 'pagamento'
+        ) {
+
+            $lancamentos =
+                $lancamentos
+                    ->sortByDesc(
+                        function ($item) {
+
+                            return
+                                $item['data_pagamento']
+                                ? $item['data_pagamento']
+                                    ->timestamp
+                                : 0;
+                        }
+                    )
+                    ->values();
+
+        } else {
+
+            $lancamentos =
+                $lancamentos
+                    ->sortByDesc(
+                        function ($item) {
+
+                            return
+                                $item['data_vencimento']
+                                ? $item['data_vencimento']
+                                    ->timestamp
+                                : 0;
+                        }
+                    )
+                    ->values();
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | CONTAS
+        |--------------------------------------------------------------------------
+        |
+        | Carregadas uma única vez para os modais
+        | de pagamento da tela.
+        |
+        */
+
+        $contas = Conta::query()
+            ->where(
+                'user_id',
+                $userId
             )
-            ->orderByDesc('id')
+            ->where(
+                'ativa',
+                true
+            )
+            ->orderBy('nome')
             ->get();
 
 
         return view(
             'despesas.index',
             compact(
-                'despesas',
+                'lancamentos',
                 'mes',
                 'situacao',
-                'filtrarPor'
+                'filtrarPor',
+                'contas'
             )
         );
     }
@@ -129,25 +386,49 @@ class DespesaController extends Controller
 
     public function create()
     {
-        $userId = auth()->id();
+        $userId =
+            auth()->id();
+
 
         $categorias = Categoria::query()
-            ->where('user_id', $userId)
-            ->where('tipo', 'despesa')
-            ->where('ativa', true)
+            ->where(
+                'user_id',
+                $userId
+            )
+            ->where(
+                'tipo',
+                'despesa'
+            )
+            ->where(
+                'ativa',
+                true
+            )
             ->orderBy('nome')
             ->get();
+
 
         $contas = Conta::query()
-            ->where('user_id', $userId)
-            ->where('ativa', true)
+            ->where(
+                'user_id',
+                $userId
+            )
+            ->where(
+                'ativa',
+                true
+            )
             ->orderBy('nome')
             ->get();
 
-        $formasPagamento = FormaPagamento::query()
-            ->where('ativa', true)
-            ->orderBy('nome')
-            ->get();
+
+        $formasPagamento =
+            FormaPagamento::query()
+                ->where(
+                    'ativa',
+                    true
+                )
+                ->orderBy('nome')
+                ->get();
+
 
         return view(
             'despesas.create',
@@ -160,11 +441,15 @@ class DespesaController extends Controller
     }
 
 
-    public function store(Request $request)
-    {
-        $userId = auth()->id();
+    public function store(
+        Request $request
+    ) {
+        $userId =
+            auth()->id();
+
 
         $dados = $request->validate([
+
             'categoria_id' => [
                 'required',
                 'integer',
@@ -218,52 +503,88 @@ class DespesaController extends Controller
             ],
         ]);
 
+
         /*
         |--------------------------------------------------------------------------
-        | VALIDA A CATEGORIA
+        | CATEGORIA
         |--------------------------------------------------------------------------
         */
 
         $categoria = Categoria::query()
-            ->where('id', $dados['categoria_id'])
-            ->where('user_id', $userId)
-            ->where('tipo', 'despesa')
-            ->where('ativa', true)
+            ->where(
+                'id',
+                $dados['categoria_id']
+            )
+            ->where(
+                'user_id',
+                $userId
+            )
+            ->where(
+                'tipo',
+                'despesa'
+            )
+            ->where(
+                'ativa',
+                true
+            )
             ->firstOrFail();
 
-        /*
-         * Guarda na despesa a classificação existente
-         * no momento do lançamento.
-         */
-        $dados['essencial'] =
-            $categoria->classificacao === 'essencial';
 
-        $dados['valor_estimado'] = false;
+        $dados['essencial'] =
+            $categoria
+                ->classificacao
+            === 'essencial';
+
+
+        $dados['valor_estimado'] =
+            false;
+
 
         /*
         |--------------------------------------------------------------------------
-        | VALIDA A CONTA
+        | CONTA
         |--------------------------------------------------------------------------
         */
 
-        if (!empty($dados['conta_id'])) {
+        if (
+            !empty(
+                $dados['conta_id']
+            )
+        ) {
 
             Conta::query()
-                ->where('id', $dados['conta_id'])
-                ->where('user_id', $userId)
-                ->where('ativa', true)
+                ->where(
+                    'id',
+                    $dados['conta_id']
+                )
+                ->where(
+                    'user_id',
+                    $userId
+                )
+                ->where(
+                    'ativa',
+                    true
+                )
                 ->firstOrFail();
         }
 
+
         /*
         |--------------------------------------------------------------------------
-        | DESPESA JÁ PAGA
+        | DESPESA PAGA
         |--------------------------------------------------------------------------
         */
 
-        if ($dados['situacao'] === 'paga') {
+        if (
+            $dados['situacao']
+            === 'paga'
+        ) {
 
-            if (empty($dados['conta_id'])) {
+            if (
+                empty(
+                    $dados['conta_id']
+                )
+            ) {
 
                 return back()
                     ->withErrors([
@@ -273,64 +594,96 @@ class DespesaController extends Controller
                     ->withInput();
             }
 
+
             $dados['data_pagamento'] =
                 $dados['data_pagamento']
-                ?? now()->toDateString();
+                ?? now()
+                    ->toDateString();
 
-            $dados['paga_em'] = now();
+
+            $dados['paga_em'] =
+                now();
 
         } else {
 
-            $dados['data_pagamento'] = null;
-            $dados['paga_em'] = null;
+            $dados['data_pagamento'] =
+                null;
+
+            $dados['paga_em'] =
+                null;
         }
 
-        $dados['user_id'] = $userId;
 
-        DB::transaction(function () use ($dados) {
+        $dados['user_id'] =
+            $userId;
 
-            $despesa = Despesa::create($dados);
 
-            /*
-             * Somente despesa efetivamente paga
-             * movimenta a conta.
-             */
-            if ($despesa->situacao === 'paga') {
+        DB::transaction(
+            function () use (
+                $dados
+            ) {
 
-                MovimentacaoConta::create([
-                    'user_id' =>
-                        $despesa->user_id,
+                $despesa =
+                    Despesa::create(
+                        $dados
+                    );
 
-                    'conta_id' =>
-                        $despesa->conta_id,
 
-                    'tipo' =>
-                        'saida',
+                /*
+                |--------------------------------------------------------------------------
+                | MOVIMENTAÇÃO
+                |--------------------------------------------------------------------------
+                */
 
-                    'origem_tipo' =>
-                        'despesa',
+                if (
+                    $despesa->situacao
+                    === 'paga'
+                ) {
 
-                    'origem_id' =>
-                        $despesa->id,
+                    MovimentacaoConta::create([
 
-                    'valor' =>
-                        $despesa->valor,
+                        'user_id' =>
+                            $despesa
+                                ->user_id,
 
-                    'data_movimentacao' =>
-                        $despesa->data_pagamento,
+                        'conta_id' =>
+                            $despesa
+                                ->conta_id,
 
-                    'descricao' =>
-                        'Despesa: '
-                        . $despesa->descricao,
+                        'tipo' =>
+                            'saida',
 
-                    'estornada' =>
-                        false,
-                ]);
+                        'origem_tipo' =>
+                            'despesa',
+
+                        'origem_id' =>
+                            $despesa->id,
+
+                        'valor' =>
+                            $despesa
+                                ->valor,
+
+                        'data_movimentacao' =>
+                            $despesa
+                                ->data_pagamento,
+
+                        'descricao' =>
+                            'Despesa: '
+                            . $despesa
+                                ->descricao,
+
+                        'estornada' =>
+                            false,
+                    ]);
+                }
             }
-        });
+        );
+
 
         return redirect()
-            ->route('despesas.index')
+            ->route(
+                'despesas.index'
+            )
             ->with(
                 'success',
                 'Despesa cadastrada com sucesso.'
@@ -338,42 +691,74 @@ class DespesaController extends Controller
     }
 
 
-    public function edit(Despesa $despesa)
-    {
-        $this->validarDespesaUsuario($despesa);
+    public function edit(
+        Despesa $despesa
+    ) {
+        $this
+            ->validarDespesaUsuario(
+                $despesa
+            );
 
-        /*
-         * Despesa paga possui histórico financeiro.
-         */
-        if ($despesa->situacao !== 'pendente') {
+
+        if (
+            $despesa->situacao
+            !== 'pendente'
+        ) {
 
             return redirect()
-                ->route('despesas.index')
+                ->route(
+                    'despesas.index'
+                )
                 ->with(
                     'error',
                     'Somente despesas pendentes podem ser editadas.'
                 );
         }
 
-        $userId = auth()->id();
+
+        $userId =
+            auth()->id();
+
 
         $categorias = Categoria::query()
-            ->where('user_id', $userId)
-            ->where('tipo', 'despesa')
-            ->where('ativa', true)
+            ->where(
+                'user_id',
+                $userId
+            )
+            ->where(
+                'tipo',
+                'despesa'
+            )
+            ->where(
+                'ativa',
+                true
+            )
             ->orderBy('nome')
             ->get();
+
 
         $contas = Conta::query()
-            ->where('user_id', $userId)
-            ->where('ativa', true)
+            ->where(
+                'user_id',
+                $userId
+            )
+            ->where(
+                'ativa',
+                true
+            )
             ->orderBy('nome')
             ->get();
 
-        $formasPagamento = FormaPagamento::query()
-            ->where('ativa', true)
-            ->orderBy('nome')
-            ->get();
+
+        $formasPagamento =
+            FormaPagamento::query()
+                ->where(
+                    'ativa',
+                    true
+                )
+                ->orderBy('nome')
+                ->get();
+
 
         return view(
             'despesas.edit',
@@ -391,15 +776,26 @@ class DespesaController extends Controller
         Request $request,
         Despesa $despesa
     ) {
-        $this->validarDespesaUsuario($despesa);
+        $this
+            ->validarDespesaUsuario(
+                $despesa
+            );
 
-        if ($despesa->situacao !== 'pendente') {
+
+        if (
+            $despesa->situacao
+            !== 'pendente'
+        ) {
             abort(403);
         }
 
-        $userId = auth()->id();
+
+        $userId =
+            auth()->id();
+
 
         $dados = $request->validate([
+
             'categoria_id' => [
                 'required',
                 'integer',
@@ -443,27 +839,57 @@ class DespesaController extends Controller
             ],
         ]);
 
+
         $categoria = Categoria::query()
-            ->where('id', $dados['categoria_id'])
-            ->where('user_id', $userId)
-            ->where('tipo', 'despesa')
+            ->where(
+                'id',
+                $dados['categoria_id']
+            )
+            ->where(
+                'user_id',
+                $userId
+            )
+            ->where(
+                'tipo',
+                'despesa'
+            )
             ->firstOrFail();
 
-        $dados['essencial'] =
-            $categoria->classificacao === 'essencial';
 
-        if (!empty($dados['conta_id'])) {
+        $dados['essencial'] =
+            $categoria
+                ->classificacao
+            === 'essencial';
+
+
+        if (
+            !empty(
+                $dados['conta_id']
+            )
+        ) {
 
             Conta::query()
-                ->where('id', $dados['conta_id'])
-                ->where('user_id', $userId)
+                ->where(
+                    'id',
+                    $dados['conta_id']
+                )
+                ->where(
+                    'user_id',
+                    $userId
+                )
                 ->firstOrFail();
         }
 
-        $despesa->update($dados);
+
+        $despesa->update(
+            $dados
+        );
+
 
         return redirect()
-            ->route('despesas.index')
+            ->route(
+                'despesas.index'
+            )
             ->with(
                 'success',
                 'Despesa atualizada com sucesso.'
@@ -475,17 +901,27 @@ class DespesaController extends Controller
         Request $request,
         Despesa $despesa
     ) {
-        $this->validarDespesaUsuario($despesa);
-
-        if ($despesa->situacao !== 'pendente') {
-
-            return back()->with(
-                'error',
-                'Somente despesas pendentes podem ser pagas.'
+        $this
+            ->validarDespesaUsuario(
+                $despesa
             );
+
+
+        if (
+            $despesa->situacao
+            !== 'pendente'
+        ) {
+
+            return back()
+                ->with(
+                    'error',
+                    'Somente despesas pendentes podem ser pagas.'
+                );
         }
 
+
         $dados = $request->validate([
+
             'conta_id' => [
                 'required',
                 'integer',
@@ -502,91 +938,122 @@ class DespesaController extends Controller
             ],
         ]);
 
+
         Conta::query()
-            ->where('id', $dados['conta_id'])
-            ->where('user_id', auth()->id())
-            ->where('ativa', true)
+            ->where(
+                'id',
+                $dados['conta_id']
+            )
+            ->where(
+                'user_id',
+                auth()->id()
+            )
+            ->where(
+                'ativa',
+                true
+            )
             ->firstOrFail();
 
-        DB::transaction(function () use (
-            $despesa,
-            $dados
-        ) {
 
-            $despesa->update([
-                'conta_id' =>
-                    $dados['conta_id'],
+        DB::transaction(
+            function () use (
+                $despesa,
+                $dados
+            ) {
 
-                'forma_pagamento_id' =>
-                    $dados['forma_pagamento_id']
-                    ?? null,
+                $despesa->update([
 
-                'data_pagamento' =>
-                    $dados['data_pagamento'],
+                    'conta_id' =>
+                        $dados['conta_id'],
 
-                'situacao' =>
-                    'paga',
+                    'forma_pagamento_id' =>
+                        $dados[
+                            'forma_pagamento_id'
+                        ]
+                        ?? null,
 
-                'paga_em' =>
-                    now(),
-            ]);
+                    'data_pagamento' =>
+                        $dados[
+                            'data_pagamento'
+                        ],
 
-            MovimentacaoConta::create([
-                'user_id' =>
-                    $despesa->user_id,
+                    'situacao' =>
+                        'paga',
 
-                'conta_id' =>
-                    $dados['conta_id'],
+                    'paga_em' =>
+                        now(),
+                ]);
 
-                'tipo' =>
-                    'saida',
 
-                'origem_tipo' =>
-                    'despesa',
+                MovimentacaoConta::create([
 
-                'origem_id' =>
-                    $despesa->id,
+                    'user_id' =>
+                        $despesa->user_id,
 
-                'valor' =>
-                    $despesa->valor,
+                    'conta_id' =>
+                        $dados['conta_id'],
 
-                'data_movimentacao' =>
-                    $dados['data_pagamento'],
+                    'tipo' =>
+                        'saida',
 
-                'descricao' =>
-                    'Despesa: '
-                    . $despesa->descricao,
+                    'origem_tipo' =>
+                        'despesa',
 
-                'estornada' =>
-                    false,
-            ]);
-        });
+                    'origem_id' =>
+                        $despesa->id,
 
-        return back()->with(
-            'success',
-            'Despesa paga com sucesso.'
+                    'valor' =>
+                        $despesa->valor,
+
+                    'data_movimentacao' =>
+                        $dados[
+                            'data_pagamento'
+                        ],
+
+                    'descricao' =>
+                        'Despesa: '
+                        . $despesa
+                            ->descricao,
+
+                    'estornada' =>
+                        false,
+                ]);
+            }
         );
+
+
+        return back()
+            ->with(
+                'success',
+                'Despesa paga com sucesso.'
+            );
     }
 
 
-    public function cancelar(Despesa $despesa)
-    {
-        $this->validarDespesaUsuario($despesa);
-
-        /*
-         * Uma despesa já paga não pode simplesmente
-         * ser cancelada porque já alterou o saldo.
-         * Futuramente teremos estorno.
-         */
-        if ($despesa->situacao !== 'pendente') {
-
-            return back()->with(
-                'error',
-                'Somente despesas pendentes podem ser canceladas.'
+    public function cancelar(
+        Despesa $despesa
+    ) {
+        $this
+            ->validarDespesaUsuario(
+                $despesa
             );
+
+
+        if (
+            $despesa->situacao
+            !== 'pendente'
+        ) {
+
+            return back()
+                ->with(
+                    'error',
+                    'Somente despesas pendentes podem ser canceladas.'
+                );
         }
 
+
         $despesa->update([
+
             'situacao' =>
                 'cancelada',
 
@@ -594,20 +1061,23 @@ class DespesaController extends Controller
                 now(),
         ]);
 
-        return back()->with(
-            'success',
-            'Despesa cancelada com sucesso.'
-        );
+
+        return back()
+            ->with(
+                'success',
+                'Despesa cancelada com sucesso.'
+            );
     }
 
 
     private function validarDespesaUsuario(
         Despesa $despesa
     ): void {
+
         abort_unless(
-            $despesa->user_id === auth()->id(),
+            $despesa->user_id
+            === auth()->id(),
             403
         );
     }
 }
-

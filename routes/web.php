@@ -16,6 +16,7 @@ use App\Http\Controllers\TransferenciaController;
 use App\Http\Controllers\RecorrenciaController;
 use App\Http\Controllers\RelatorioController;
 use App\Http\Controllers\PrevisaoDespesaController;
+use App\Http\Controllers\ParcelamentoController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -280,6 +281,23 @@ Route::middleware('auth')->group(function () {
         '/previsao-despesas',
         [PrevisaoDespesaController::class, 'index']
     )->name('previsao-despesas.index');
+
+    Route::post(
+        '/parcelamentos',
+        [ParcelamentoController::class, 'store']
+    )->name('parcelamentos.store');
+
+    Route::post(
+        '/parcelas/{parcela}/pagar',
+        [ParcelamentoController::class, 'pagarParcela']
+    )->name('parcelas.pagar');
+
+    Route::post(
+        '/parcelas/{parcela}/cancelar',
+        [ParcelamentoController::class, 'cancelarParcela']
+    )->name('parcelas.cancelar');
+
+
 });
 
 require __DIR__.'/auth.php';

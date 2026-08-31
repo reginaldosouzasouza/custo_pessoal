@@ -245,11 +245,13 @@ class DashboardController extends Controller
         | PRÓXIMO MÊS
         |--------------------------------------------------------------------------
         |
-        | Tudo que vencer especificamente no próximo mês:
+        | Mesma regra utilizada na tela "Previsão de Despesas":
         |
         | - despesas pendentes;
         | - parcelas pendentes;
-        | - faturas de cartão em aberto.
+        | - despesas recorrentes previstas;
+        | - faturas do cartão;
+        | - sem duplicar recorrências já materializadas.
         |
         */
 
@@ -263,40 +265,20 @@ class DashboardController extends Controller
             ->endOfMonth();
 
 
-        $despesasProximoMes = Despesa::query()
-            ->where('user_id', $userId)
-            ->where('situacao', 'pendente')
-            ->whereBetween(
-                'data_vencimento',
-                [
-                    $inicioProximoMes,
-                    $fimProximoMes,
-                ]
+        /*
+        |--------------------------------------------------------------------------
+        | DESPESAS LANÇADAS
+        |--------------------------------------------------------------------------
+        */
+
+        $queryDespesasProximoMes = Despesa::query()
+            ->where(
+                'user_id',
+                $userId
             )
-            ->sum('valor');
-
-
-        $parcelasProximoMes = Parcela::query()
-            ->where('user_id', $userId)
-            ->where('situacao', 'pendente')
-            ->whereBetween(
-                'data_vencimento',
-                [
-                    $inicioProximoMes,
-                    $fimProximoMes,
-                ]
-            )
-            ->sum('valor');
-
-
-        $faturasProximoMes = Fatura::query()
-            ->where('user_id', $userId)
-            ->whereIn(
+            ->where(
                 'situacao',
-                [
-                    'aberta',
-                    'fechada',
-                ]
+                'pendente'
             )
             ->whereBetween(
                 'data_vencimento',
@@ -304,14 +286,215 @@ class DashboardController extends Controller
                     $inicioProximoMes,
                     $fimProximoMes,
                 ]
-            )
-            ->sum('valor_total');
+            );
 
+
+        /*
+        * Se a despesa nasceu de uma recorrência,
+        * ela não entra novamente aqui.
+        */
+        if (
+            Schema::hasColumn(
+                'despesas',
+                'recorrencia_id'
+            )
+        ) {
+
+            $queryDespesasProximoMes
+                ->whereNull(
+                    'recorrencia_id'
+                );
+        }
+
+
+        $despesasProximoMes =
+            (float)
+            $queryDespesasProximoMes
+                ->sum('valor');
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | PARCELAS
+        |--------------------------------------------------------------------------
+        */
+
+        $parcelasProximoMes =
+            (float)
+            Parcela::query()
+                ->where(
+                    'user_id',
+                    $userId
+                )
+                ->where(
+                    'situacao',
+                    'pendente'
+                )
+                ->whereBetween(
+                    'data_vencimento',
+                    [
+                        $inicioProximoMes,
+                        $fimProximoMes,
+                    ]
+                )
+                ->sum('valor');
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | DESPESAS RECORRENTES
+        |--------------------------------------------------------------------------
+        */
+
+        $recorrenciasProximoMes = Recorrencia::query()
+            ->where(
+                'user_id',
+                $userId
+            )
+            ->where(
+                'tipo',
+                'despesa'
+            )
+            ->where(
+                'ativa',
+                true
+            )
+            ->whereDate(
+                'data_inicio',
+                '<=',
+                $fimProximoMes->toDateString()
+            )
+            ->where(
+                function ($query) use (
+                    $inicioProximoMes
+                ) {
+
+                    $query
+                        ->whereNull(
+                            'data_fim'
+                        )
+                        ->orWhereDate(
+                            'data_fim',
+                            '>=',
+                            $inicioProximoMes
+                                ->toDateString()
+                        );
+                }
+            )
+            ->get();
+
+
+        $totalRecorrentesProximoMes = 0.0;
+
+
+        foreach (
+            $recorrenciasProximoMes
+            as $recorrencia
+        ) {
+
+            $vencimentos =
+                $this->vencimentosRecorrenciaNoMes(
+                    $recorrencia,
+                    $inicioProximoMes,
+                    $fimProximoMes
+                );
+
+
+            foreach (
+                $vencimentos
+                as $vencimento
+            ) {
+
+                /*
+                * Evita duplicidade caso essa recorrência
+                * já tenha sido materializada em despesa.
+                */
+                if (
+                    Schema::hasColumn(
+                        'despesas',
+                        'recorrencia_id'
+                    )
+                ) {
+
+                    $jaGerada = Despesa::query()
+                        ->where(
+                            'user_id',
+                            $userId
+                        )
+                        ->where(
+                            'recorrencia_id',
+                            $recorrencia->id
+                        )
+                        ->whereDate(
+                            'data_vencimento',
+                            $vencimento
+                                ->toDateString()
+                        )
+                        ->where(
+                            'situacao',
+                            '!=',
+                            'cancelada'
+                        )
+                        ->exists();
+
+
+                    if ($jaGerada) {
+                        continue;
+                    }
+                }
+
+
+                $totalRecorrentesProximoMes +=
+                    (float) (
+                        $recorrencia
+                            ->valor_padrao
+                        ?? 0
+                    );
+            }
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | FATURAS
+        |--------------------------------------------------------------------------
+        */
+
+        $faturasProximoMes =
+            (float)
+            Fatura::query()
+                ->where(
+                    'user_id',
+                    $userId
+                )
+                ->whereBetween(
+                    'data_vencimento',
+                    [
+                        $inicioProximoMes,
+                        $fimProximoMes,
+                    ]
+                )
+                ->whereIn(
+                    'situacao',
+                    [
+                        'aberta',
+                        'fechada',
+                    ]
+                )
+                ->sum('valor_total');
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | TOTAL DO PRÓXIMO MÊS
+        |--------------------------------------------------------------------------
+        */
 
         $proximoMes =
-            (float) $despesasProximoMes
-            + (float) $parcelasProximoMes
-            + (float) $faturasProximoMes;
+            $despesasProximoMes
+            + $parcelasProximoMes
+            + $totalRecorrentesProximoMes
+            + $faturasProximoMes;
 
 
         /*
