@@ -20,8 +20,7 @@
 
     .filtros-grid {
         display:grid;
-        grid-template-columns:
-            repeat(6, minmax(150px, 1fr));
+        grid-template-columns:repeat(6, minmax(150px, 1fr));
         gap:12px;
         align-items:end;
     }
@@ -56,7 +55,8 @@
     }
 
     .btn-filtrar,
-    .btn-limpar {
+    .btn-limpar,
+    .btn-excel {
         min-height:40px;
         border-radius:8px;
         padding:0 14px;
@@ -79,6 +79,17 @@
         border:1px solid #d9dee5;
         background:#fff;
         color:#374151;
+    }
+
+    .btn-excel {
+        background:#198754;
+        color:#fff;
+        border:1px solid #198754;
+    }
+
+    .btn-excel:hover {
+        color:#fff;
+        opacity:.9;
     }
 
     .cards-resumo {
@@ -122,6 +133,12 @@
         overflow-x:auto;
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | DESKTOP
+    |--------------------------------------------------------------------------
+    */
+
     .relatorio-table {
         width:100%;
         min-width:1050px;
@@ -146,6 +163,14 @@
 
     .relatorio-table tr:last-child td {
         border-bottom:none;
+    }
+
+    /*
+     * IMPORTANTE:
+     * no desktop os cards mobile ficam ocultos.
+     */
+    .relatorio-mobile {
+        display:none;
     }
 
     .valor {
@@ -226,27 +251,14 @@
         color:#6b7280;
     }
 
-    .btn-excel {
-        min-height:40px;
-        border-radius:8px;
-        padding:0 14px;
-        display:inline-flex;
-        align-items:center;
-        justify-content:center;
-        font-size:12px;
-        font-weight:600;
-        text-decoration:none;
-        background:#198754;
-        color:#fff;
-        border:1px solid #198754;
-    }
-
-    .btn-excel:hover {
-        color:#fff;
-        opacity:.9;
-    }
+    /*
+    |--------------------------------------------------------------------------
+    | TABLET
+    |--------------------------------------------------------------------------
+    */
 
     @media(max-width:1200px) {
+
         .filtros-grid {
             grid-template-columns:repeat(3, 1fr);
         }
@@ -256,22 +268,116 @@
         }
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | MOBILE
+    |--------------------------------------------------------------------------
+    */
+
     @media(max-width:700px) {
+
         .filtros-grid {
             grid-template-columns:1fr;
         }
 
         .acoes-filtro {
             width:100%;
+            flex-wrap:wrap;
         }
 
         .btn-filtrar,
-        .btn-limpar {
+        .btn-limpar,
+        .btn-excel {
             flex:1;
         }
 
         .cards-resumo {
             grid-template-columns:1fr;
+        }
+
+        /*
+         * No celular a tabela desaparece.
+         */
+        .relatorio-table {
+            display:none;
+        }
+
+        /*
+         * E entram os cards mobile.
+         */
+        .relatorio-mobile {
+            display:block;
+        }
+
+        .table-card {
+            padding:12px;
+            overflow:visible;
+        }
+
+        .mobile-despesa-card {
+            background:#fff;
+            border:1px solid #e5e7eb;
+            border-radius:10px;
+            padding:14px;
+            margin-bottom:12px;
+        }
+
+        .mobile-despesa-card:last-child {
+            margin-bottom:0;
+        }
+
+        .mobile-despesa-header {
+            display:flex;
+            justify-content:space-between;
+            align-items:flex-start;
+            gap:12px;
+            margin-bottom:12px;
+        }
+
+        .mobile-despesa-descricao {
+            font-size:14px;
+            font-weight:700;
+            color:#111827;
+        }
+
+        .mobile-despesa-categoria {
+            font-size:11px;
+            color:#6b7280;
+            margin-top:3px;
+        }
+
+        .mobile-despesa-valor {
+            font-size:15px;
+            font-weight:700;
+            color:#111827;
+            white-space:nowrap;
+        }
+
+        .mobile-despesa-grid {
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:10px 12px;
+        }
+
+        .mobile-campo-label {
+            font-size:10px;
+            color:#6b7280;
+            margin-bottom:3px;
+        }
+
+        .mobile-campo-valor {
+            font-size:12px;
+            color:#374151;
+        }
+
+        .mobile-despesa-status {
+            margin-top:12px;
+            padding-top:10px;
+            border-top:1px solid #edf0f3;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            gap:10px;
         }
     }
 </style>
@@ -650,6 +756,10 @@
 
     @if($itens->count() > 0)
 
+        {{-- =====================================================
+             DESKTOP / TABLET
+        ====================================================== --}}
+
         <table class="relatorio-table">
 
             <thead>
@@ -845,10 +955,232 @@
 
         </table>
 
+
+        {{-- =====================================================
+             MOBILE
+        ====================================================== --}}
+
+        <div class="relatorio-mobile">
+
+            @foreach($itens as $item)
+
+                @php
+
+                    $classeOrigem = match(
+                        $item['tipo']
+                    ) {
+                        'recorrente' =>
+                            'origem-recorrente',
+
+                        'parcela' =>
+                            'origem-parcela',
+
+                        'fatura' =>
+                            'origem-fatura',
+
+                        default =>
+                            'origem-despesa',
+                    };
+
+
+                    $situacaoItem = strtolower(
+                        $item['situacao']
+                        ?? ''
+                    );
+
+
+                    $classeSituacao = match(
+                        $situacaoItem
+                    ) {
+                        'paga',
+                        'pago' =>
+                            'status-paga',
+
+                        'cancelada' =>
+                            'status-cancelada',
+
+                        'prevista' =>
+                            'status-prevista',
+
+                        'aberta' =>
+                            'status-aberta',
+
+                        'fechada' =>
+                            'status-fechada',
+
+                        'vencida' =>
+                            'status-vencida',
+
+                        default =>
+                            'status-pendente',
+                    };
+
+
+                    $textoSituacao = match(
+                        $situacaoItem
+                    ) {
+                        'paga',
+                        'pago' =>
+                            'Paga',
+
+                        'cancelada' =>
+                            'Cancelada',
+
+                        'prevista' =>
+                            'Prevista',
+
+                        'aberta' =>
+                            'Aberta',
+
+                        'fechada' =>
+                            'Fechada',
+
+                        'vencida' =>
+                            'Vencida',
+
+                        default =>
+                            'Pendente',
+                    };
+
+
+                    $vencimento =
+                        !empty($item['vencimento'])
+                            ? \Carbon\Carbon::parse(
+                                $item['vencimento']
+                            )->format('d/m/Y')
+                            : '-';
+
+
+                    $pagamento =
+                        !empty($item['pagamento'])
+                            ? \Carbon\Carbon::parse(
+                                $item['pagamento']
+                            )->format('d/m/Y')
+                            : '-';
+
+                @endphp
+
+
+                <div class="mobile-despesa-card">
+
+                    <div class="mobile-despesa-header">
+
+                        <div>
+
+                            <div class="mobile-despesa-descricao">
+                                {{ $item['descricao'] }}
+                            </div>
+
+                            <div class="mobile-despesa-categoria">
+                                {{ $item['categoria'] ?? '-' }}
+                            </div>
+
+                        </div>
+
+
+                        <div class="mobile-despesa-valor">
+
+                            R$
+                            {{ number_format(
+                                $item['valor'],
+                                2,
+                                ',',
+                                '.'
+                            ) }}
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="mobile-despesa-grid">
+
+                        <div>
+
+                            <div class="mobile-campo-label">
+                                Origem
+                            </div>
+
+                            <div class="mobile-campo-valor">
+
+                                <span
+                                    class="origem {{ $classeOrigem }}"
+                                >
+                                    {{ $item['origem'] }}
+                                </span>
+
+                            </div>
+
+                        </div>
+
+
+                        <div>
+
+                            <div class="mobile-campo-label">
+                                Vencimento
+                            </div>
+
+                            <div class="mobile-campo-valor">
+                                {{ $vencimento }}
+                            </div>
+
+                        </div>
+
+
+                        <div>
+
+                            <div class="mobile-campo-label">
+                                Pagamento
+                            </div>
+
+                            <div class="mobile-campo-valor">
+                                {{ $pagamento }}
+                            </div>
+
+                        </div>
+
+
+                        <div>
+
+                            <div class="mobile-campo-label">
+                                Conta
+                            </div>
+
+                            <div class="mobile-campo-valor">
+                                {{ $item['conta'] ?? '-' }}
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="mobile-despesa-status">
+
+                        <span>
+                            Situação
+                        </span>
+
+                        <span
+                            class="status {{ $classeSituacao }}"
+                        >
+                            {{ $textoSituacao }}
+                        </span>
+
+                    </div>
+
+                </div>
+
+            @endforeach
+
+        </div>
+
     @else
 
         <div class="empty-state">
+
             Nenhuma despesa encontrada para os filtros informados.
+
         </div>
 
     @endif
