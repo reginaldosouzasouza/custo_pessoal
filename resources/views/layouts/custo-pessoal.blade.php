@@ -623,12 +623,21 @@
             </a>
 
 
-            <a href="{{ route('relatorios.index') }}"
+           <a href="{{ route('relatorios.index') }}"
                 class="cp-menu-link
-                {{ request()->is('relatorios*') ? 'active' : '' }}">
+                {{ request()->routeIs('relatorios.index') ? 'active' : '' }}">
 
                 <span class="cp-menu-icon">▥</span>
                 <span>Relatórios</span>
+            </a>
+
+
+            <a href="{{ route('relatorios.despesas') }}"
+                class="cp-menu-link
+                {{ request()->routeIs('relatorios.despesas*') ? 'active' : '' }}">
+
+                <span class="cp-menu-icon">▦</span>
+                <span>Relatório de Despesas</span>
             </a>
 
         </nav>
