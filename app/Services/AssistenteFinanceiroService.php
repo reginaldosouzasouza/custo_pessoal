@@ -602,7 +602,7 @@ class AssistenteFinanceiroService
 
             [
                 'regex' =>
-                    '/^(?:quanto|qual o valor|qual valor)\s+(?:e|é|custa|fica|devo de)?\s*(?:o|a|do|da)?\s*(.+)$/',
+                    '/^(?:quanto\s+(?:e|custa|fica)\s+(?:o|a)?\s*|qual\s+(?:e\s+)?(?:o\s+)?valor\s+(?:do|da|de)?\s*|quanto\s+devo\s+(?:do|da|de)\s+)(.+)$/',
 
                 'tipo' =>
                     'valor',
