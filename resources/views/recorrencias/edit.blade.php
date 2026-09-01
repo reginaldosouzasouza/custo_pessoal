@@ -46,12 +46,6 @@
         font-size:14px;
     }
 
-    .form-control:focus {
-        border-color:#2f80ed;
-        outline:none;
-        box-shadow:0 0 0 3px rgba(47,128,237,.10);
-    }
-
     textarea.form-control {
         min-height:95px;
         resize:vertical;
@@ -149,10 +143,8 @@
         @csrf
         @method('PUT')
 
-
         <div class="form-grid">
 
-            {{-- TIPO --}}
             <div class="form-group">
 
                 <label class="form-label">
@@ -165,44 +157,20 @@
                     class="form-control"
                     required
                 >
-
-                    <option
-                        value="despesa"
-                        @selected(
-                            old(
-                                'tipo',
-                                $recorrencia->tipo
-                            ) === 'despesa'
-                        )
-                    >
+                    <option value="despesa"
+                        @selected(old('tipo', $recorrencia->tipo) === 'despesa')>
                         Despesa
                     </option>
 
-
-                    <option
-                        value="receita"
-                        @selected(
-                            old(
-                                'tipo',
-                                $recorrencia->tipo
-                            ) === 'receita'
-                        )
-                    >
+                    <option value="receita"
+                        @selected(old('tipo', $recorrencia->tipo) === 'receita')>
                         Receita
                     </option>
-
                 </select>
-
-                @error('tipo')
-                    <span class="form-error">
-                        {{ $message }}
-                    </span>
-                @enderror
 
             </div>
 
 
-            {{-- CATEGORIA --}}
             <div class="form-group">
 
                 <label class="form-label">
@@ -226,10 +194,7 @@
                             value="{{ $categoria->id }}"
                             data-tipo="{{ $categoria->tipo }}"
                             @selected(
-                                old(
-                                    'categoria_id',
-                                    $recorrencia->categoria_id
-                                )
+                                old('categoria_id', $recorrencia->categoria_id)
                                 == $categoria->id
                             )
                         >
@@ -250,7 +215,6 @@
             </div>
 
 
-            {{-- DESCRIÇÃO --}}
             <div class="form-group full">
 
                 <label class="form-label">
@@ -261,23 +225,14 @@
                     type="text"
                     name="descricao"
                     class="form-control"
-                    value="{{ old(
-                        'descricao',
-                        $recorrencia->descricao
-                    ) }}"
+                    value="{{ old('descricao', $recorrencia->descricao) }}"
+                    placeholder="Ex.: Internet"
                     required
                 >
-
-                @error('descricao')
-                    <span class="form-error">
-                        {{ $message }}
-                    </span>
-                @enderror
 
             </div>
 
 
-            {{-- TIPO DE VALOR --}}
             <div class="form-group">
 
                 <label class="form-label">
@@ -290,43 +245,20 @@
                     class="form-control"
                     required
                 >
-
-                    <option
-                        value="fixo"
-                        @selected(
-                            old(
-                                'tipo_valor',
-                                $recorrencia->tipo_valor
-                            ) === 'fixo'
-                        )
-                    >
+                    <option value="fixo"
+                        @selected(old('tipo_valor', $recorrencia->tipo_valor) === 'fixo')>
                         Fixo
                     </option>
 
-                    <option
-                        value="variavel"
-                        @selected(
-                            old(
-                                'tipo_valor',
-                                $recorrencia->tipo_valor
-                            ) === 'variavel'
-                        )
-                    >
+                    <option value="variavel"
+                        @selected(old('tipo_valor', $recorrencia->tipo_valor) === 'variavel')>
                         Variável
                     </option>
-
                 </select>
-
-                @error('tipo_valor')
-                    <span class="form-error">
-                        {{ $message }}
-                    </span>
-                @enderror
 
             </div>
 
 
-            {{-- VALOR PADRÃO --}}
             <div class="form-group">
 
                 <label class="form-label">
@@ -340,10 +272,7 @@
                     name="valor_padrao"
                     id="valorPadrao"
                     class="form-control"
-                    value="{{ old(
-                        'valor_padrao',
-                        $recorrencia->valor_padrao
-                    ) }}"
+                    value="{{ old('valor_padrao', $recorrencia->valor_padrao) }}"
                 >
 
                 <span class="form-hint">
@@ -359,7 +288,6 @@
             </div>
 
 
-            {{-- FREQUÊNCIA --}}
             <div class="form-group">
 
                 <label class="form-label">
@@ -368,83 +296,59 @@
 
                 <select
                     name="frequencia"
+                    id="frequenciaRecorrencia"
                     class="form-control"
                     required
                 >
+                    <option value="diaria"
+                        @selected(old('frequencia', $recorrencia->frequencia) === 'diaria')>
+                        Diária
+                    </option>
 
-                    <option
-                        value="semanal"
-                        @selected(
-                            old(
-                                'frequencia',
-                                $recorrencia->frequencia
-                            ) === 'semanal'
-                        )
-                    >
+                    <option value="cada_3_dias"
+                        @selected(old('frequencia', $recorrencia->frequencia) === 'cada_3_dias')>
+                        A cada 3 dias
+                    </option>
+
+                    <option value="cada_5_dias"
+                        @selected(old('frequencia', $recorrencia->frequencia) === 'cada_5_dias')>
+                        A cada 5 dias
+                    </option>
+
+                    <option value="semanal"
+                        @selected(old('frequencia', $recorrencia->frequencia) === 'semanal')>
                         Semanal
                     </option>
 
-                    <option
-                        value="mensal"
-                        @selected(
-                            old(
-                                'frequencia',
-                                $recorrencia->frequencia
-                            ) === 'mensal'
-                        )
-                    >
+                    <option value="mensal"
+                        @selected(old('frequencia', $recorrencia->frequencia) === 'mensal')>
                         Mensal
                     </option>
 
-                    <option
-                        value="trimestral"
-                        @selected(
-                            old(
-                                'frequencia',
-                                $recorrencia->frequencia
-                            ) === 'trimestral'
-                        )
-                    >
+                    <option value="trimestral"
+                        @selected(old('frequencia', $recorrencia->frequencia) === 'trimestral')>
                         Trimestral
                     </option>
 
-                    <option
-                        value="semestral"
-                        @selected(
-                            old(
-                                'frequencia',
-                                $recorrencia->frequencia
-                            ) === 'semestral'
-                        )
-                    >
+                    <option value="semestral"
+                        @selected(old('frequencia', $recorrencia->frequencia) === 'semestral')>
                         Semestral
                     </option>
 
-                    <option
-                        value="anual"
-                        @selected(
-                            old(
-                                'frequencia',
-                                $recorrencia->frequencia
-                            ) === 'anual'
-                        )
-                    >
+                    <option value="anual"
+                        @selected(old('frequencia', $recorrencia->frequencia) === 'anual')>
                         Anual
                     </option>
-
                 </select>
 
-                @error('frequencia')
-                    <span class="form-error">
-                        {{ $message }}
-                    </span>
-                @enderror
+                <span class="form-hint">
+                    Diária, 3 dias, 5 dias e semanal usam a Data de início como referência.
+                </span>
 
             </div>
 
 
-            {{-- DIA DO VENCIMENTO --}}
-            <div class="form-group">
+            <div class="form-group" id="grupoDiaVencimento">
 
                 <label class="form-label">
                     Dia do vencimento
@@ -455,27 +359,19 @@
                     min="1"
                     max="31"
                     name="dia_vencimento"
+                    id="diaVencimento"
                     class="form-control"
-                    value="{{ old(
-                        'dia_vencimento',
-                        $recorrencia->dia_vencimento
-                    ) }}"
+                    value="{{ old('dia_vencimento', $recorrencia->dia_vencimento) }}"
+                    placeholder="Ex.: 10"
                 >
 
                 <span class="form-hint">
-                    Se o mês tiver menos dias, depois trataremos pelo último dia válido.
+                    Usado nas frequências mensal, trimestral, semestral e anual.
                 </span>
-
-                @error('dia_vencimento')
-                    <span class="form-error">
-                        {{ $message }}
-                    </span>
-                @enderror
 
             </div>
 
 
-            {{-- DATA INÍCIO --}}
             <div class="form-group">
 
                 <label class="form-label">
@@ -488,23 +384,14 @@
                     class="form-control"
                     value="{{ old(
                         'data_inicio',
-                        $recorrencia
-                            ->data_inicio
-                            ?->format('Y-m-d')
+                        $recorrencia->data_inicio?->format('Y-m-d')
                     ) }}"
                     required
                 >
 
-                @error('data_inicio')
-                    <span class="form-error">
-                        {{ $message }}
-                    </span>
-                @enderror
-
             </div>
 
 
-            {{-- DATA FINAL --}}
             <div class="form-group">
 
                 <label class="form-label">
@@ -517,9 +404,7 @@
                     class="form-control"
                     value="{{ old(
                         'data_fim',
-                        $recorrencia
-                            ->data_fim
-                            ?->format('Y-m-d')
+                        $recorrencia->data_fim?->format('Y-m-d')
                     ) }}"
                 >
 
@@ -527,16 +412,9 @@
                     Deixe em branco se não houver data final.
                 </span>
 
-                @error('data_fim')
-                    <span class="form-error">
-                        {{ $message }}
-                    </span>
-                @enderror
-
             </div>
 
 
-            {{-- CONTA PADRÃO --}}
             <div class="form-group">
 
                 <label class="form-label">
@@ -547,7 +425,6 @@
                     name="conta_padrao_id"
                     class="form-control"
                 >
-
                     <option value="">
                         Não definir
                     </option>
@@ -557,10 +434,7 @@
                         <option
                             value="{{ $conta->id }}"
                             @selected(
-                                old(
-                                    'conta_padrao_id',
-                                    $recorrencia->conta_padrao_id
-                                )
+                                old('conta_padrao_id', $recorrencia->conta_padrao_id)
                                 == $conta->id
                             )
                         >
@@ -571,16 +445,9 @@
 
                 </select>
 
-                @error('conta_padrao_id')
-                    <span class="form-error">
-                        {{ $message }}
-                    </span>
-                @enderror
-
             </div>
 
 
-            {{-- FORMA DE PAGAMENTO --}}
             <div class="form-group">
 
                 <label class="form-label">
@@ -601,10 +468,7 @@
                         <option
                             value="{{ $forma->id }}"
                             @selected(
-                                old(
-                                    'forma_pagamento_id',
-                                    $recorrencia->forma_pagamento_id
-                                )
+                                old('forma_pagamento_id', $recorrencia->forma_pagamento_id)
                                 == $forma->id
                             )
                         >
@@ -615,16 +479,9 @@
 
                 </select>
 
-                @error('forma_pagamento_id')
-                    <span class="form-error">
-                        {{ $message }}
-                    </span>
-                @enderror
-
             </div>
 
 
-            {{-- OBSERVAÇÃO --}}
             <div class="form-group full">
 
                 <label class="form-label">
@@ -634,16 +491,7 @@
                 <textarea
                     name="observacao"
                     class="form-control"
-                >{{ old(
-                    'observacao',
-                    $recorrencia->observacao
-                ) }}</textarea>
-
-                @error('observacao')
-                    <span class="form-error">
-                        {{ $message }}
-                    </span>
-                @enderror
+                >{{ old('observacao', $recorrencia->observacao) }}</textarea>
 
             </div>
 
@@ -680,43 +528,42 @@
 document.addEventListener('DOMContentLoaded', function () {
 
     const tipo =
-        document.getElementById(
-            'tipoRecorrencia'
-        );
+        document.getElementById('tipoRecorrencia');
 
     const categoria =
-        document.getElementById(
-            'categoriaRecorrencia'
-        );
+        document.getElementById('categoriaRecorrencia');
 
     const tipoValor =
-        document.getElementById(
-            'tipoValor'
-        );
+        document.getElementById('tipoValor');
 
     const valor =
-        document.getElementById(
-            'valorPadrao'
-        );
+        document.getElementById('valorPadrao');
+
+    const frequencia =
+        document.getElementById('frequenciaRecorrencia');
+
+    const grupoDiaVencimento =
+        document.getElementById('grupoDiaVencimento');
+
+    const diaVencimento =
+        document.getElementById('diaVencimento');
 
 
     function atualizarCategorias() {
 
-        const tipoSelecionado =
-            tipo.value;
+        const tipoSelecionado = tipo.value;
 
-        Array.from(
-            categoria.options
-        ).forEach(function(option) {
+        Array.from(categoria.options)
+            .forEach(function(option) {
 
-            if (!option.value) {
-                return;
-            }
+                if (!option.value) {
+                    return;
+                }
 
-            option.hidden =
-                option.dataset.tipo
-                !== tipoSelecionado;
-        });
+                option.hidden =
+                    option.dataset.tipo
+                    !== tipoSelecionado;
+            });
 
 
         const selecionada =
@@ -744,6 +591,34 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
 
+    function atualizarDiaVencimento() {
+
+        const frequenciasPorDias = [
+            'diaria',
+            'cada_3_dias',
+            'cada_5_dias',
+            'semanal'
+        ];
+
+        const usaDataInicio =
+            frequenciasPorDias.includes(
+                frequencia.value
+            );
+
+        grupoDiaVencimento.style.display =
+            usaDataInicio
+                ? 'none'
+                : 'flex';
+
+        diaVencimento.disabled =
+            usaDataInicio;
+
+        if (usaDataInicio) {
+            diaVencimento.value = '';
+        }
+    }
+
+
     tipo.addEventListener(
         'change',
         atualizarCategorias
@@ -754,9 +629,14 @@ document.addEventListener('DOMContentLoaded', function () {
         atualizarValor
     );
 
+    frequencia.addEventListener(
+        'change',
+        atualizarDiaVencimento
+    );
 
     atualizarCategorias();
     atualizarValor();
+    atualizarDiaVencimento();
 });
 </script>
 @endpush

@@ -1129,24 +1129,54 @@ class AssistenteFinanceiroService
 
 
         /*
-         * Semanal: repete de 7 em 7 dias
-         * usando data_inicio como referência.
+         * Frequências baseadas em dias.
+         * A contagem parte sempre da data_inicio e não
+         * reinicia quando muda o mês.
          */
-        if (
-            $recorrencia->frequencia
-            === 'semanal'
-        ) {
+        $intervaloDias =
+            match (
+                $recorrencia->frequencia
+            ) {
+                'diaria' => 1,
+                'cada_3_dias' => 3,
+                'cada_5_dias' => 5,
+                'semanal' => 7,
+                default => null,
+            };
+
+        if ($intervaloDias !== null) {
 
             $data =
                 $inicioRecorrencia
                     ->copy();
 
-            while (
+            if (
                 $data->lt(
                     $inicioMes
                 )
             ) {
-                $data->addWeek();
+
+                $diasDecorridos =
+                    (int) $inicioRecorrencia
+                        ->diffInDays(
+                            $inicioMes
+                        );
+
+                $resto =
+                    $diasDecorridos
+                    % $intervaloDias;
+
+                $data =
+                    $inicioMes
+                        ->copy();
+
+                if ($resto !== 0) {
+
+                    $data->addDays(
+                        $intervaloDias
+                        - $resto
+                    );
+                }
             }
 
             while (
@@ -1166,7 +1196,9 @@ class AssistenteFinanceiroService
                     );
                 }
 
-                $data->addWeek();
+                $data->addDays(
+                    $intervaloDias
+                );
             }
 
             return $resultado;

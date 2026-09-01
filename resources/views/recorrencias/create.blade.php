@@ -292,20 +292,59 @@
 
                 <select
                     name="frequencia"
+                    id="frequenciaRecorrencia"
                     class="form-control"
                     required
                 >
-                    <option value="semanal">Semanal</option>
-                    <option value="mensal" selected>Mensal</option>
-                    <option value="trimestral">Trimestral</option>
-                    <option value="semestral">Semestral</option>
-                    <option value="anual">Anual</option>
+                    <option value="diaria"
+                        @selected(old('frequencia') === 'diaria')>
+                        Diária
+                    </option>
+
+                    <option value="cada_3_dias"
+                        @selected(old('frequencia') === 'cada_3_dias')>
+                        A cada 3 dias
+                    </option>
+
+                    <option value="cada_5_dias"
+                        @selected(old('frequencia') === 'cada_5_dias')>
+                        A cada 5 dias
+                    </option>
+
+                    <option value="semanal"
+                        @selected(old('frequencia') === 'semanal')>
+                        Semanal
+                    </option>
+
+                    <option value="mensal"
+                        @selected(old('frequencia', 'mensal') === 'mensal')>
+                        Mensal
+                    </option>
+
+                    <option value="trimestral"
+                        @selected(old('frequencia') === 'trimestral')>
+                        Trimestral
+                    </option>
+
+                    <option value="semestral"
+                        @selected(old('frequencia') === 'semestral')>
+                        Semestral
+                    </option>
+
+                    <option value="anual"
+                        @selected(old('frequencia') === 'anual')>
+                        Anual
+                    </option>
                 </select>
+
+                <span class="form-hint">
+                    Diária, 3 dias, 5 dias e semanal usam a Data de início como referência.
+                </span>
 
             </div>
 
 
-            <div class="form-group">
+            <div class="form-group" id="grupoDiaVencimento">
 
                 <label class="form-label">
                     Dia do vencimento
@@ -316,10 +355,15 @@
                     min="1"
                     max="31"
                     name="dia_vencimento"
+                    id="diaVencimento"
                     class="form-control"
                     value="{{ old('dia_vencimento') }}"
                     placeholder="Ex.: 10"
                 >
+
+                <span class="form-hint">
+                    Usado nas frequências mensal, trimestral, semestral e anual.
+                </span>
 
             </div>
 
@@ -488,6 +532,15 @@ document.addEventListener('DOMContentLoaded', function () {
     const valor =
         document.getElementById('valorPadrao');
 
+    const frequencia =
+        document.getElementById('frequenciaRecorrencia');
+
+    const grupoDiaVencimento =
+        document.getElementById('grupoDiaVencimento');
+
+    const diaVencimento =
+        document.getElementById('diaVencimento');
+
 
     function atualizarCategorias() {
 
@@ -531,6 +584,34 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
 
+    function atualizarDiaVencimento() {
+
+        const frequenciasPorDias = [
+            'diaria',
+            'cada_3_dias',
+            'cada_5_dias',
+            'semanal'
+        ];
+
+        const usaDataInicio =
+            frequenciasPorDias.includes(
+                frequencia.value
+            );
+
+        grupoDiaVencimento.style.display =
+            usaDataInicio
+                ? 'none'
+                : 'flex';
+
+        diaVencimento.disabled =
+            usaDataInicio;
+
+        if (usaDataInicio) {
+            diaVencimento.value = '';
+        }
+    }
+
+
     tipo.addEventListener(
         'change',
         atualizarCategorias
@@ -541,8 +622,14 @@ document.addEventListener('DOMContentLoaded', function () {
         atualizarValor
     );
 
+    frequencia.addEventListener(
+        'change',
+        atualizarDiaVencimento
+    );
+
     atualizarCategorias();
     atualizarValor();
+    atualizarDiaVencimento();
 });
 </script>
 @endpush

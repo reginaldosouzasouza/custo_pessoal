@@ -30,15 +30,16 @@ class RecorrenciaController extends Controller
             ->where('user_id', $userId)
             ->where('ativa', true)
             ->where('tipo', 'despesa')
-            ->sum('valor_padrao');    
+            ->sum('valor_padrao');
 
         return view(
             'recorrencias.index',
-            compact('recorrencias',
-                    'totalMensalFixas')
+            compact(
+                'recorrencias',
+                'totalMensalFixas'
+            )
         );
     }
-
 
     public function create()
     {
@@ -72,83 +73,11 @@ class RecorrenciaController extends Controller
         );
     }
 
-
     public function store(Request $request)
     {
         $userId = auth()->id();
 
-        $dados = $request->validate([
-            'tipo' => [
-                'required',
-                'in:receita,despesa',
-            ],
-
-            'categoria_id' => [
-                'required',
-                'integer',
-            ],
-
-            'conta_padrao_id' => [
-                'nullable',
-                'integer',
-            ],
-
-            'forma_pagamento_id' => [
-                'nullable',
-                'integer',
-            ],
-
-            'descricao' => [
-                'required',
-                'string',
-                'max:180',
-            ],
-
-            'tipo_valor' => [
-                'required',
-                'in:fixo,variavel',
-            ],
-
-            'valor_padrao' => [
-                'nullable',
-                'numeric',
-                'gte:0',
-            ],
-
-            'frequencia' => [
-                'required',
-                'in:semanal,mensal,trimestral,semestral,anual',
-            ],
-
-            'dia_vencimento' => [
-                'nullable',
-                'integer',
-                'between:1,31',
-            ],
-
-            'data_inicio' => [
-                'required',
-                'date',
-            ],
-
-            'data_fim' => [
-                'nullable',
-                'date',
-                'after_or_equal:data_inicio',
-            ],
-
-            'observacao' => [
-                'nullable',
-                'string',
-            ],
-        ]);
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | CATEGORIA
-        |--------------------------------------------------------------------------
-        */
+        $dados = $this->validarDados($request);
 
         $categoria = Categoria::query()
             ->where('id', $dados['categoria_id'])
@@ -157,31 +86,13 @@ class RecorrenciaController extends Controller
             ->where('ativa', true)
             ->firstOrFail();
 
-
-        /*
-        |--------------------------------------------------------------------------
-        | CONTA PADRÃO
-        |--------------------------------------------------------------------------
-        */
-
         if (!empty($dados['conta_padrao_id'])) {
-
             Conta::query()
-                ->where(
-                    'id',
-                    $dados['conta_padrao_id']
-                )
+                ->where('id', $dados['conta_padrao_id'])
                 ->where('user_id', $userId)
                 ->where('ativa', true)
                 ->firstOrFail();
         }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | VALOR FIXO
-        |--------------------------------------------------------------------------
-        */
 
         if (
             $dados['tipo_valor'] === 'fixo'
@@ -198,17 +109,9 @@ class RecorrenciaController extends Controller
                 ->withInput();
         }
 
-
-        /*
-        |--------------------------------------------------------------------------
-        | ESSENCIAL
-        |--------------------------------------------------------------------------
-        */
-
         $essencial =
             $dados['tipo'] === 'despesa'
             && $categoria->classificacao === 'essencial';
-
 
         Recorrencia::create([
             'user_id' =>
@@ -239,7 +142,11 @@ class RecorrenciaController extends Controller
                 $dados['frequencia'],
 
             'dia_vencimento' =>
-                $dados['dia_vencimento'] ?? null,
+                $this->usaDiaVencimento(
+                    $dados['frequencia']
+                )
+                    ? ($dados['dia_vencimento'] ?? null)
+                    : null,
 
             'data_inicio' =>
                 $dados['data_inicio'],
@@ -257,7 +164,6 @@ class RecorrenciaController extends Controller
                 $dados['observacao'] ?? null,
         ]);
 
-
         return redirect()
             ->route('recorrencias.index')
             ->with(
@@ -265,7 +171,6 @@ class RecorrenciaController extends Controller
                 'Conta fixa cadastrada com sucesso.'
             );
     }
-
 
     public function edit(Recorrencia $recorrencia)
     {
@@ -302,7 +207,6 @@ class RecorrenciaController extends Controller
         );
     }
 
-
     public function update(
         Request $request,
         Recorrencia $recorrencia
@@ -311,7 +215,79 @@ class RecorrenciaController extends Controller
 
         $userId = auth()->id();
 
-        $dados = $request->validate([
+        $dados = $this->validarDados($request);
+
+        $categoria = Categoria::query()
+            ->where('id', $dados['categoria_id'])
+            ->where('user_id', $userId)
+            ->where('tipo', $dados['tipo'])
+            ->where('ativa', true)
+            ->firstOrFail();
+
+        if (!empty($dados['conta_padrao_id'])) {
+            Conta::query()
+                ->where('id', $dados['conta_padrao_id'])
+                ->where('user_id', $userId)
+                ->where('ativa', true)
+                ->firstOrFail();
+        }
+
+        if (
+            $dados['tipo_valor'] === 'fixo'
+            && (
+                !isset($dados['valor_padrao'])
+                || (float) $dados['valor_padrao'] <= 0
+            )
+        ) {
+            return back()
+                ->withErrors([
+                    'valor_padrao' =>
+                        'Informe o valor da conta fixa.',
+                ])
+                ->withInput();
+        }
+
+        $dados['essencial'] =
+            $dados['tipo'] === 'despesa'
+            && $categoria->classificacao === 'essencial';
+
+        if (!$this->usaDiaVencimento($dados['frequencia'])) {
+            $dados['dia_vencimento'] = null;
+        }
+
+        $recorrencia->update($dados);
+
+        return redirect()
+            ->route('recorrencias.index')
+            ->with(
+                'success',
+                'Conta fixa atualizada com sucesso.'
+            );
+    }
+
+    public function alternarStatus(
+        Recorrencia $recorrencia
+    ) {
+        $this->validarUsuario($recorrencia);
+
+        $recorrencia->ativa =
+            !$recorrencia->ativa;
+
+        $recorrencia->save();
+
+        return redirect()
+            ->route('recorrencias.index')
+            ->with(
+                'success',
+                $recorrencia->ativa
+                    ? 'Conta fixa ativada.'
+                    : 'Conta fixa desativada.'
+            );
+    }
+
+    private function validarDados(Request $request): array
+    {
+        return $request->validate([
             'tipo' => [
                 'required',
                 'in:receita,despesa',
@@ -351,7 +327,7 @@ class RecorrenciaController extends Controller
 
             'frequencia' => [
                 'required',
-                'in:semanal,mensal,trimestral,semestral,anual',
+                'in:diaria,cada_3_dias,cada_5_dias,semanal,mensal,trimestral,semestral,anual',
             ],
 
             'dia_vencimento' => [
@@ -376,83 +352,22 @@ class RecorrenciaController extends Controller
                 'string',
             ],
         ]);
-
-
-        $categoria = Categoria::query()
-            ->where('id', $dados['categoria_id'])
-            ->where('user_id', $userId)
-            ->where('tipo', $dados['tipo'])
-            ->where('ativa', true)
-            ->firstOrFail();
-
-
-        if (!empty($dados['conta_padrao_id'])) {
-
-            Conta::query()
-                ->where(
-                    'id',
-                    $dados['conta_padrao_id']
-                )
-                ->where('user_id', $userId)
-                ->where('ativa', true)
-                ->firstOrFail();
-        }
-
-
-        if (
-            $dados['tipo_valor'] === 'fixo'
-            && (
-                !isset($dados['valor_padrao'])
-                || (float) $dados['valor_padrao'] <= 0
-            )
-        ) {
-            return back()
-                ->withErrors([
-                    'valor_padrao' =>
-                        'Informe o valor da conta fixa.',
-                ])
-                ->withInput();
-        }
-
-
-        $dados['essencial'] =
-            $dados['tipo'] === 'despesa'
-            && $categoria->classificacao === 'essencial';
-
-
-        $recorrencia->update($dados);
-
-
-        return redirect()
-            ->route('recorrencias.index')
-            ->with(
-                'success',
-                'Conta fixa atualizada com sucesso.'
-            );
     }
 
-
-    public function alternarStatus(
-        Recorrencia $recorrencia
-    ) {
-        $this->validarUsuario($recorrencia);
-
-        $recorrencia->ativa =
-            !$recorrencia->ativa;
-
-        $recorrencia->save();
-
-
-        return redirect()
-            ->route('recorrencias.index')
-            ->with(
-                'success',
-                $recorrencia->ativa
-                    ? 'Conta fixa ativada.'
-                    : 'Conta fixa desativada.'
-            );
+    private function usaDiaVencimento(
+        string $frequencia
+    ): bool {
+        return in_array(
+            $frequencia,
+            [
+                'mensal',
+                'trimestral',
+                'semestral',
+                'anual',
+            ],
+            true
+        );
     }
-
 
     private function validarUsuario(
         Recorrencia $recorrencia
