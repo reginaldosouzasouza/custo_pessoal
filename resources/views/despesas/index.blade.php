@@ -55,6 +55,10 @@
         font-size: 12px;
     }
 
+    .filtro-descricao {
+        min-width: 210px;
+    }
+
     .btn-filtrar {
         height: 36px;
         border: none;
@@ -63,6 +67,20 @@
         background: #374151;
         color: #fff;
         cursor: pointer;
+        font-size: 12px;
+    }
+
+    .btn-limpar {
+        height: 36px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #d9dee5;
+        border-radius: 7px;
+        padding: 0 14px;
+        background: #fff;
+        color: #374151;
+        text-decoration: none;
         font-size: 12px;
     }
 
@@ -286,6 +304,73 @@
     <div class="filtro-grupo">
 
         <label class="filtro-label">
+            Data de vencimento
+        </label>
+
+        <input
+            type="date"
+            name="data_vencimento"
+            class="filtro-control"
+            value="{{ request('data_vencimento') }}"
+        >
+
+    </div>
+
+
+    <div class="filtro-grupo">
+
+        <label class="filtro-label">
+            Categoria
+        </label>
+
+        <select
+            name="categoria_id"
+            class="filtro-control"
+        >
+
+            <option value="">
+                Todas
+            </option>
+
+            @foreach($categorias as $categoria)
+
+                <option
+                    value="{{ $categoria->id }}"
+                    @selected(
+                        (string) request('categoria_id')
+                        === (string) $categoria->id
+                    )
+                >
+                    {{ $categoria->nome }}
+                </option>
+
+            @endforeach
+
+        </select>
+
+    </div>
+
+
+    <div class="filtro-grupo">
+
+        <label class="filtro-label">
+            Descrição
+        </label>
+
+        <input
+            type="text"
+            name="descricao"
+            class="filtro-control filtro-descricao"
+            value="{{ request('descricao') }}"
+            placeholder="Ex.: luz, água, internet"
+        >
+
+    </div>
+
+
+    <div class="filtro-grupo">
+
+        <label class="filtro-label">
             Situação
         </label>
 
@@ -330,6 +415,14 @@
     >
         Filtrar
     </button>
+
+
+    <a
+        href="{{ route('despesas.index') }}"
+        class="btn-limpar"
+    >
+        Limpar
+    </a>
 
 </form>
 
@@ -667,7 +760,6 @@
                             </form>
 
                         @endif
-                        
 
                     </div>
 

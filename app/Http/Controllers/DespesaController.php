@@ -18,6 +18,9 @@ class DespesaController extends Controller
         $userId = auth()->id();
 
         $mes = $request->input('mes');
+        $dataVencimento = $request->input('data_vencimento');
+        $categoriaId = $request->input('categoria_id');
+        $descricao = trim((string) $request->input('descricao', ''));
         $situacao = $request->input('situacao');
 
         $filtrarPor = $request->input(
@@ -73,6 +76,31 @@ class DespesaController extends Controller
                         $numeroMes
                     );
             }
+        }
+
+
+        if ($dataVencimento) {
+            $queryDespesas->whereDate(
+                'data_vencimento',
+                $dataVencimento
+            );
+        }
+
+
+        if ($categoriaId) {
+            $queryDespesas->where(
+                'categoria_id',
+                $categoriaId
+            );
+        }
+
+
+        if ($descricao !== '') {
+            $queryDespesas->where(
+                'descricao',
+                'like',
+                '%' . $descricao . '%'
+            );
         }
 
 
@@ -145,6 +173,41 @@ class DespesaController extends Controller
                         $numeroMes
                     );
             }
+        }
+
+
+        if ($dataVencimento) {
+            $queryParcelas->whereDate(
+                'data_vencimento',
+                $dataVencimento
+            );
+        }
+
+
+        if ($categoriaId) {
+            $queryParcelas->whereHas(
+                'parcelamento',
+                function ($query) use ($categoriaId) {
+                    $query->where(
+                        'categoria_id',
+                        $categoriaId
+                    );
+                }
+            );
+        }
+
+
+        if ($descricao !== '') {
+            $queryParcelas->whereHas(
+                'parcelamento',
+                function ($query) use ($descricao) {
+                    $query->where(
+                        'descricao',
+                        'like',
+                        '%' . $descricao . '%'
+                    );
+                }
+            );
         }
 
 
@@ -356,6 +419,29 @@ class DespesaController extends Controller
 
         /*
         |--------------------------------------------------------------------------
+        | CATEGORIAS DO FILTRO
+        |--------------------------------------------------------------------------
+        */
+
+        $categorias = Categoria::query()
+            ->where(
+                'user_id',
+                $userId
+            )
+            ->where(
+                'tipo',
+                'despesa'
+            )
+            ->where(
+                'ativa',
+                true
+            )
+            ->orderBy('nome')
+            ->get();
+
+
+        /*
+        |--------------------------------------------------------------------------
         | CONTAS
         |--------------------------------------------------------------------------
         |
@@ -382,8 +468,12 @@ class DespesaController extends Controller
             compact(
                 'lancamentos',
                 'mes',
+                'dataVencimento',
+                'categoriaId',
+                'descricao',
                 'situacao',
                 'filtrarPor',
+                'categorias',
                 'contas',
                 'totalExibido',
                 'totalPendente',
