@@ -18,6 +18,7 @@ use App\Http\Controllers\RelatorioController;
 use App\Http\Controllers\PrevisaoDespesaController;
 use App\Http\Controllers\ParcelamentoController;
 use App\Http\Controllers\RelatorioDespesasController;
+use App\Http\Controllers\AssistenteFinanceiroController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -307,6 +308,11 @@ Route::middleware('auth')->group(function () {
         '/relatorios/despesas/excel',
         [RelatorioDespesasController::class, 'excel']
     )->name('relatorios.despesas.excel');
+
+    Route::post(
+        '/assistente-financeiro/perguntar',
+        [AssistenteFinanceiroController::class, 'perguntar']
+    )->name('assistente-financeiro.perguntar');
 
 
 });

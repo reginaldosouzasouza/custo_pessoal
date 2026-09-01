@@ -895,6 +895,10 @@
 
 </div>
 
+@auth
+    @include('components.assistente-financeiro')
+@endauth
+
 
 <script>
 document.addEventListener(
