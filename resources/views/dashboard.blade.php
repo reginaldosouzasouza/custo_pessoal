@@ -516,9 +516,11 @@
         </h1>
     </div>
 
-    <a href="#"
-       class="btn-nova-movimentacao">
-        + Nova movimentação
+    <a
+        href="{{ route('movimentacoes.index') }}"
+        class="btn-nova-movimentacao"
+    >
+        Ver movimentações
     </a>
 
 </div>

@@ -13,6 +13,11 @@ use Illuminate\Support\Str;
 
 class AssistenteFinanceiroService
 {
+    public function __construct(
+        private ManualFinanceiroService $manual
+    ) {
+    }
+
     private array $intencoes = [
         'agradecimento' => [
             'obrigado',
@@ -168,7 +173,58 @@ class AssistenteFinanceiroService
 
     public function responder(int $userId, string $pergunta): string
     {
-        $texto = $this->normalizar($pergunta);
+        $perguntaOriginal =
+            trim($pergunta);
+
+        $texto =
+            $this->normalizar(
+                $perguntaOriginal
+            );
+
+        /*
+        |--------------------------------------------------------------------------
+        | MODO MANUAL
+        |--------------------------------------------------------------------------
+        |
+        | Na V1 o usuário chama o manual explicitamente.
+        | Exemplos:
+        | Manual como cadastrar uma despesa
+        | Manual: como funciona a previsão
+        | Manual - como pagar uma fatura
+        |
+        | Sem o prefixo "Manual", a pergunta segue para o
+        | assistente financeiro normalmente.
+        |
+        */
+
+        if (
+            preg_match(
+                '/^manual\b/i',
+                $perguntaOriginal
+            )
+        ) {
+
+            $perguntaManual =
+                trim(
+                    preg_replace(
+                        '/^manual\s*[:\-]?\s*/i',
+                        '',
+                        $perguntaOriginal
+                    )
+                );
+
+            if ($perguntaManual === '') {
+                return
+                    $this->manual
+                        ->ajudaInicial();
+            }
+
+            return
+                $this->manual
+                    ->responderDireto(
+                        $perguntaManual
+                    );
+        }
 
         $dataPerguntada =
             $this->extrairDataDaPergunta(

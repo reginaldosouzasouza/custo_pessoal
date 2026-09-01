@@ -36,6 +36,12 @@
 .sga-assistente-msg.usuario{
     margin-left:auto;background:#0d6efd;color:#fff;border-bottom-right-radius:4px
 }
+.sga-assistente-manual-link{
+    display:inline-flex;align-items:center;gap:6px;margin-top:9px;padding:7px 10px;
+    border-radius:9px;background:#eff6ff;border:1px solid #bfdbfe;color:#0d6efd;
+    font-weight:600;text-decoration:none;white-space:normal
+}
+.sga-assistente-manual-link:hover{background:#dbeafe}
 .sga-assistente-atalhos{
     display:flex;gap:7px;overflow-x:auto;padding:10px 12px;background:#fff;
     border-top:1px solid #eef0f3;scrollbar-width:none;flex-shrink:0
@@ -108,7 +114,7 @@
     <div class="sga-assistente-mensagens" id="sgaAssistenteMensagens">
         <div class="sga-assistente-msg bot">
             Olá! Posso responder sobre gastos do mês, pendências, atrasos,
-            próximos vencimentos e categorias.
+            próximos vencimentos, categorias e também sobre o Manual do sistema.
         </div>
     </div>
 
@@ -127,6 +133,9 @@
 
         <button type="button" class="sga-assistente-atalho"
             data-pergunta="Qual categoria teve o maior gasto?">Maior categoria</button>
+
+        <button type="button" class="sga-assistente-atalho"
+            data-pergunta="Manual">Manual</button>
     </div>
 
     <form class="sga-assistente-form" id="sgaAssistenteForm">
@@ -181,12 +190,43 @@ document.addEventListener('DOMContentLoaded', function () {
         painel?.classList.remove('aberto');
     }
 
-    function adicionarMensagem(texto, tipo) {
+    function adicionarMensagem(texto, tipo, manualUrl = null) {
         const elemento = document.createElement('div');
         elemento.className = 'sga-assistente-msg ' + tipo;
-        elemento.textContent = texto;
+
+        const conteudo = document.createElement('div');
+        conteudo.textContent = texto;
+        elemento.appendChild(conteudo);
+
+        if (manualUrl) {
+            const link = document.createElement('a');
+            link.className = 'sga-assistente-manual-link';
+            link.href = manualUrl;
+            link.target = '_blank';
+            link.rel = 'noopener';
+            link.textContent = '📖 Abrir esta parte no Manual';
+            elemento.appendChild(link);
+        }
+
         mensagens.appendChild(elemento);
         mensagens.scrollTop = mensagens.scrollHeight;
+    }
+
+    function extrairLinkManual(texto) {
+        const regex = /\[\[manual:(.+?)\]\]/;
+        const encontrado = texto.match(regex);
+
+        if (!encontrado) {
+            return {
+                texto: texto,
+                url: null
+            };
+        }
+
+        return {
+            texto: texto.replace(regex, '').trim(),
+            url: encontrado[1]
+        };
     }
 
     async function perguntar(pergunta) {
@@ -222,10 +262,16 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             const dados = await resposta.json();
+            const respostaBot =
+                dados.resposta ?? 'Não consegui responder agora.';
+
+            const manual =
+                extrairLinkManual(respostaBot);
 
             adicionarMensagem(
-                dados.resposta ?? 'Não consegui responder agora.',
-                'bot'
+                manual.texto,
+                'bot',
+                manual.url
             );
         } catch (erro) {
             adicionarMensagem(
@@ -238,7 +284,6 @@ document.addEventListener('DOMContentLoaded', function () {
             input.focus();
         }
     }
-
 
     const SpeechRecognition =
         window.SpeechRecognition

@@ -314,6 +314,13 @@ Route::middleware('auth')->group(function () {
         [AssistenteFinanceiroController::class, 'perguntar']
     )->name('assistente-financeiro.perguntar');
 
+    Route::get(
+        '/manual-financeiro',
+        function () {
+            return view('manual-financeiro.index');
+        }
+    )->name('manual-financeiro.index');
+
 
 });
 
