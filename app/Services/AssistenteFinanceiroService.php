@@ -82,6 +82,8 @@ class AssistenteFinanceiroService
             'vencimentos de hoje',
             'o que tenho para pagar hoje',
             'o que eu tenho para pagar hoje',
+            'o que tenho para vencer hoje',
+            'o que eu tenho para vencer hoje',
         ],
 
         'receitas_mes' => [
@@ -150,6 +152,8 @@ class AssistenteFinanceiroService
             'o que esta atrasado',
             'o que tenho atrasado',
             'quanto tenho atrasado',
+            'me mostra as contas atrasadas',
+            'mostra as contas atrasadas',
         ],
 
         'proximos_vencimentos' => [
@@ -328,7 +332,8 @@ class AssistenteFinanceiroService
             . "• Quanto gastei este mês?\n"
             . "• Quanto paguei hoje?\n"
             . "• Quanto tenho pendente?\n"
-            . "• Tenho despesas atrasadas?\n"
+            . "• Me mostra as contas atrasadas?\n"
+            . "• O que tenho para vencer hoje?\n"
             . "• Quais são os próximos vencimentos?\n"
             . "• Qual categoria teve o maior gasto?";
     }
@@ -1292,8 +1297,27 @@ class AssistenteFinanceiroService
 
     private function totalCartaoMes(int $userId): string
     {
-        $competencia =
-            now()->format('Y-m');
+        /*
+         * "Este mês" deve seguir a mesma regra do Dashboard:
+         * considerar a DATA DE VENCIMENTO da fatura no mês atual,
+         * e não a competência da fatura.
+         *
+         * Exemplo:
+         * competência 09/2026 com vencimento em 07/10/2026
+         * pertence ao cartão de OUTUBRO para esta consulta.
+         */
+
+        $inicioMes =
+            now()
+                ->copy()
+                ->startOfMonth()
+                ->toDateString();
+
+        $fimMes =
+            now()
+                ->copy()
+                ->endOfMonth()
+                ->toDateString();
 
         $faturas = Fatura::query()
             ->with('cartao')
@@ -1301,15 +1325,28 @@ class AssistenteFinanceiroService
                 'user_id',
                 $userId
             )
-            ->where(
-                'competencia',
-                $competencia
+            ->whereIn(
+                'situacao',
+                [
+                    'aberta',
+                    'fechada',
+                ]
+            )
+            ->whereBetween(
+                'data_vencimento',
+                [
+                    $inicioMes,
+                    $fimMes,
+                ]
+            )
+            ->orderBy(
+                'data_vencimento'
             )
             ->get();
 
         if ($faturas->isEmpty()) {
             return
-                'Você não possui faturas de cartão para '
+                'Você não possui faturas de cartão em aberto com vencimento em '
                 . now()->format('m/Y')
                 . '.';
         }
@@ -1355,7 +1392,7 @@ class AssistenteFinanceiroService
 
         if ($linhas->isEmpty()) {
             return
-                'As faturas de cartão de '
+                'As faturas com vencimento em '
                 . now()->format('m/Y')
                 . ' já estão pagas.';
         }

@@ -67,7 +67,7 @@
 <div class="manual-wrap" id="inicio">
     <div class="manual-hero">
         <h1>Manual SGA Finanças</h1>
-        <p>Guia de uso para parceiros — versão de testes.</p>
+        <p>Guia de uso para parceiros — versão Setembro/2026.</p>
     </div>
 
     <div class="manual-grid">
@@ -84,6 +84,7 @@
                 <a href="#compras-cartao">Compras no Cartão</a>
                 <a href="#faturas">Faturas</a>
                 <a href="#previsao">Previsão de Despesas</a>
+                <a href="#contas-pagar">Contas a Pagar</a>
                 <a href="#movimentacoes">Movimentações</a>
                 <a href="#fluxo">Fluxo recomendado</a>
                 <a href="#testes">Roteiro de testes</a>
@@ -96,15 +97,15 @@
                 <h2>Roteiro rápido de 10 minutos</h2>
                 <ol class="manual-passos">
                     <li>Acesse o SGA Finanças com o usuário fornecido.</li>
-                    <li>Confira o Dashboard e os valores zerados/iniciais.</li>
+                    <li>Confira o Dashboard e os principais indicadores do mês.</li>
                     <li>Cadastre ou confira uma Conta/Carteira.</li>
                     <li>Cadastre uma Receita e marque como recebida quando houver entrada real.</li>
-                    <li>Cadastre uma Despesa e registre o pagamento quando houver saída real.</li>
-                    <li>Cadastre uma conta recorrente, como internet, aluguel ou energia.</li>
+                    <li>Cadastre uma Despesa e deixe-a pendente até o pagamento.</li>
+                    <li>Cadastre uma conta recorrente, como internet, aluguel, mercado ou energia.</li>
                     <li>Cadastre um cartão e uma compra parcelada.</li>
                     <li>Abra Previsão de Despesas e confira os compromissos do mês.</li>
-                    <li>Confira Faturas e Cartão em aberto.</li>
-                    <li>Envie feedback sobre dúvidas, erros ou comportamentos inesperados.</li>
+                    <li>Abra Contas a Pagar e faça a baixa das obrigações que forem pagas.</li>
+                    <li>Confira Movimentações e envie feedback sobre dúvidas ou comportamentos inesperados.</li>
                 </ol>
                 <div class="manual-alerta">
                     Para testes, prefira dados fictícios ou valores aproximados.
@@ -126,12 +127,11 @@
                         </thead>
                         <tbody>
                             <tr><td>Receitas do mês</td><td>Total de receitas efetivamente recebidas no mês.</td><td>Receita pendente não entra até ser recebida.</td></tr>
-                            <tr><td>Despesas do mês</td><td>Total que realmente saiu das contas no mês.</td><td>Só entra pagamento real de despesa, parcela ou fatura.</td></tr>
-                            <tr><td>Previsão de despesas</td><td>Compromissos previstos para o mês.</td><td>Considera despesas lançadas, recorrências e faturas com vencimento no mês, sem duplicar recorrências já materializadas.</td></tr>
-                            <tr><td>Saldo atual</td><td>Soma dos saldos disponíveis nas contas e carteiras ativas.</td><td>Saldo inicial + entradas - saídas.</td></tr>
-                            <tr><td>A vencer</td><td>Despesas e parcelas pendentes de hoje até o fim do mês.</td><td>Faturas ficam no card próprio.</td></tr>
-                            <tr><td>Cartão em aberto</td><td>Soma das faturas abertas/fechadas que ainda não foram pagas.</td><td>A compra no cartão não reduz o saldo da conta até o pagamento da fatura.</td></tr>
-                            <tr><td>Próximo mês</td><td>Compromissos com vencimento no próximo mês.</td><td>Ajuda a antecipar despesas e faturas futuras.</td></tr>
+                            <tr><td>Despesas Pagas do mês</td><td>Total que realmente saiu das contas no mês.</td><td>Só entra pagamento real de despesa, parcela ou fatura.</td></tr>
+                            <tr><td>Previsão de despesas</td><td>Compromissos ainda não pagos com vencimento no mês atual.</td><td>Considera despesas pendentes, parcelas pendentes, recorrências previstas e faturas abertas/fechadas do mês.</td></tr>
+                            <tr><td>Saldo atual</td><td>Soma do dinheiro disponível nas contas bancárias, digitais e carteiras ativas.</td><td>Saldo inicial + entradas - saídas.</td></tr>
+                            <tr><td>Cartão em aberto</td><td>Saldo restante das faturas que vencem no mês atual e ainda não foram pagas.</td><td>Faturas futuras não entram neste card.</td></tr>
+                            <tr><td>Próximo mês</td><td>Compromissos com vencimento no próximo mês.</td><td>Ajuda a antecipar despesas, parcelas, recorrências e faturas futuras.</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -196,13 +196,14 @@
                 </p>
 
                 <ul>
-                    <li>Frequências disponíveis: semanal, mensal, trimestral, semestral e anual.</li>
+                    <li>Frequências disponíveis incluem diária, a cada 3 dias, a cada 5 dias, semanal, mensal, trimestral, semestral e anual.</li>
                     <li>O valor pode ser fixo ou variável.</li>
                     <li>Defina o dia de vencimento e a data de início.</li>
                     <li>Se a conta tiver prazo para terminar, informe a data final.</li>
                     <li>Se a data final ficar em branco, a recorrência continuará sendo considerada por tempo indeterminado, enquanto estiver ativa.</li>
                     <li>Uma recorrência pode ser desativada sem ser apagada.</li>
-                    <li>A Previsão de Despesas considera a recorrência apenas nos meses correspondentes à frequência cadastrada.</li>
+                    <li>A Previsão de Despesas calcula as ocorrências conforme a frequência cadastrada, inclusive frequências baseadas em dias.</li>
+                    <li>O pagamento de uma ocorrência recorrente é feito em <strong>Contas a Pagar</strong>, sem alterar a regra principal da recorrência.</li>
                 </ul>
 
                 <div class="manual-alerta">
@@ -237,7 +238,8 @@
                 <h3 id="faturas">7.3 Faturas</h3>
                 <ul>
                     <li>A fatura consolida as parcelas que pertencem a uma competência.</li>
-                    <li>O card “Cartão em aberto” mostra o total das faturas ainda abertas/fechadas.</li>
+                    <li>O card “Cartão em aberto” do Dashboard mostra somente o saldo restante das faturas que vencem no mês atual.</li>
+                    <li>A tela Faturas apresenta vencimentos atuais e futuros e permite filtrar por ano, mês, cartão e situação.</li>
                     <li>Quando a fatura for paga, registre o pagamento usando a conta correta.</li>
                     <li>O pagamento da fatura é a saída real de dinheiro e passa a compor “Despesas do mês”.</li>
                 </ul>
@@ -249,20 +251,72 @@
 
             <section class="manual-secao" id="previsao">
                 <h2>8. Previsão de Despesas</h2>
-                <p>Esta tela responde à pergunta: “Quanto tenho comprometido neste mês?”</p>
+                <p>Esta tela responde à pergunta: “Quanto ainda tenho comprometido neste mês?”</p>
                 <ul>
-                    <li>Despesas já lançadas com vencimento no mês.</li>
+                    <li>Despesas pendentes com vencimento no mês.</li>
+                    <li>Parcelas pendentes com vencimento no mês.</li>
                     <li>Contas recorrentes previstas para o mês.</li>
-                    <li>Faturas de cartão com vencimento no mês.</li>
-                    <li>O sistema evita contar novamente uma recorrência que já tenha sido transformada em uma despesa real, quando esse vínculo existe.</li>
+                    <li>Faturas abertas ou fechadas com vencimento no mês.</li>
+                    <li>Faturas já pagas não entram mais na previsão.</li>
+                    <li>Quando houver pagamento parcial de fatura, o sistema considera apenas o saldo restante.</li>
+                    <li>O sistema evita contar novamente uma recorrência que já tenha sido materializada em despesa para a mesma data.</li>
                 </ul>
                 <div class="manual-alerta">
-                    Consulte a Previsão de Despesas antes de assumir novos compromissos. Ela ajuda a enxergar o mês além do saldo disponível hoje.
+                    Consulte a Previsão de Despesas antes de assumir novos compromissos. Ela mostra o que ainda está previsto para o período, não o que já foi pago.
+                </div>
+            </section>
+
+            <section class="manual-secao" id="contas-pagar">
+                <h2>9. Contas a Pagar</h2>
+                <p>
+                    Esta é a tela central para consultar e pagar obrigações financeiras,
+                    independentemente da origem do compromisso.
+                </p>
+
+                <h3>O que aparece nesta tela</h3>
+                <ul>
+                    <li>Despesas pendentes.</li>
+                    <li>Parcelas pendentes.</li>
+                    <li>Ocorrências previstas de contas recorrentes.</li>
+                    <li>Faturas abertas ou fechadas ainda não pagas.</li>
+                </ul>
+
+                <h3>Filtros disponíveis</h3>
+                <ul>
+                    <li>Mês.</li>
+                    <li>Data de vencimento.</li>
+                    <li>Categoria.</li>
+                    <li>Origem: Despesa, Recorrente, Parcela ou Cartão.</li>
+                    <li>Descrição.</li>
+                    <li>Situação.</li>
+                </ul>
+
+                <p>
+                    O campo <strong>Mês</strong> pode ficar em branco. Nesse caso, despesas,
+                    parcelas e faturas pendentes podem ser consultadas sem limitar a um único mês.
+                    Para recorrências sem data final, o sistema trabalha com um horizonte futuro
+                    controlado para evitar uma lista infinita.
+                </p>
+
+                <h3>Como pagar</h3>
+                <ol>
+                    <li>Localize o compromisso.</li>
+                    <li>Clique em <strong>Pagar</strong>.</li>
+                    <li>Confira o valor.</li>
+                    <li>Selecione a conta utilizada.</li>
+                    <li>Informe a forma de pagamento quando disponível.</li>
+                    <li>Confira a data do pagamento.</li>
+                    <li>Confirme.</li>
+                </ol>
+
+                <div class="manual-alerta">
+                    Para recorrências, o pagamento gera uma despesa real referente somente àquela ocorrência.
+                    A regra de recorrência continua ativa para os próximos vencimentos.
                 </div>
             </section>
 
             <section class="manual-secao" id="movimentacoes">
-                <h2>9. Movimentações</h2>
+                <h2>10. Movimentações</h2>
                 <p>A tela de Movimentações é o histórico financeiro das contas e carteiras.</p>
                 <ul>
                     <li>Use-a para auditoria e conferência.</li>
@@ -272,27 +326,29 @@
             </section>
 
             <section class="manual-secao" id="fluxo">
-                <h2>10. Fluxo recomendado de uso</h2>
+                <h2>11. Fluxo recomendado de uso</h2>
                 <ol class="manual-passos">
                     <li>Cadastre/valide as contas e carteiras — defina onde o dinheiro está.</li>
                     <li>Cadastre receitas e despesas — registre compromissos e entradas.</li>
-                    <li>Cadastre recorrências — evite ter que lembrar contas fixas todos os meses.</li>
+                    <li>Cadastre recorrências — automatize compromissos que se repetem.</li>
                     <li>Cadastre cartão e compras — distribua corretamente as parcelas nas faturas.</li>
-                    <li>Registre pagamentos/recebimentos — somente aqui o realizado altera o saldo.</li>
-                    <li>Acompanhe a Previsão — veja o que ainda compromete o mês.</li>
+                    <li>Acompanhe a Previsão de Despesas — veja o que ainda compromete o mês.</li>
+                    <li>Use Contas a Pagar — centralize e efetue as baixas das obrigações.</li>
+                    <li>Confira Movimentações — valide a saída ou entrada registrada.</li>
                     <li>Confira o Dashboard — compare realizado, saldo e compromissos futuros.</li>
                 </ol>
             </section>
 
             <section class="manual-secao" id="testes">
-                <h2>11. Roteiro de Teste para Parceiros</h2>
+                <h2>12. Roteiro de Teste para Parceiros</h2>
                 <ul>
                     <li><strong>Teste A - Receita:</strong> cadastre uma receita de R$ 1.000,00, marque como recebida e confirme o card.</li>
                     <li><strong>Teste B - Despesa:</strong> cadastre R$ 200,00, confira como compromisso e depois pague para validar saída e saldo.</li>
                     <li><strong>Teste C - Recorrência:</strong> cadastre Internet mensal, vencimento dia 10, e confira na Previsão.</li>
                     <li><strong>Teste D - Cartão:</strong> cadastre uma compra de R$ 600,00 em 3 parcelas e confira faturas futuras.</li>
                     <li><strong>Teste E - Transferência:</strong> transfira valor entre duas contas e confirme que só muda a distribuição do saldo.</li>
-                    <li><strong>Teste F - Próximo mês:</strong> confira se parcelas/faturas futuras aparecem no mês correto.</li>
+                    <li><strong>Teste F - Contas a Pagar:</strong> filtre por origem, categoria e situação; depois efetue um pagamento e confira a movimentação.</li>
+                    <li><strong>Teste G - Próximo mês:</strong> confira se parcelas, recorrências e faturas futuras aparecem no mês correto.</li>
                 </ul>
 
                 <h3>Como enviar um bom feedback</h3>
@@ -328,7 +384,8 @@
                     <li>Acesse <strong>Previsão de Despesas</strong>.</li>
                     <li>Escolha o mês que deseja consultar.</li>
                     <li>Confira os compromissos previstos para o período.</li>
-                    <li>A tela reúne despesas lançadas, contas recorrentes previstas e faturas com vencimento no mês.</li>
+                    <li>A tela reúne despesas pendentes, parcelas pendentes, contas recorrentes previstas e faturas abertas/fechadas com vencimento no mês.</li>
+                    <li>Faturas pagas não entram na previsão.</li>
                     <li>Use essa visão antes de assumir novos compromissos.</li>
                 </ol>
                 <div class="manual-alerta">
@@ -365,7 +422,7 @@
                 <ol>
                     <li>Acesse <strong>Contas Fixas</strong> e clique em <strong>+ Nova recorrência</strong>.</li>
                     <li>Informe a descrição da conta, categoria, forma de pagamento e o valor padrão.</li>
-                    <li>Escolha a frequência: semanal, mensal, trimestral, semestral ou anual.</li>
+                    <li>Escolha a frequência disponível, como diária, a cada 3 dias, a cada 5 dias, semanal, mensal, trimestral, semestral ou anual.</li>
                     <li>É essa frequência que informa ao sistema com que periodicidade a conta deve voltar a aparecer nas previsões.</li>
                     <li>Informe o dia de vencimento e a data de início.</li>
                     <li>Se a conta tiver prazo para terminar, informe também a data final.</li>
@@ -396,6 +453,22 @@
                 </ol>
                 <div class="manual-alerta">
                     O sistema distribui as parcelas nas faturas correspondentes. A saída real de dinheiro acontece quando a fatura é paga.
+                </div>
+
+                <h3 id="duvida-contas-pagar">Para que serve Contas a Pagar?</h3>
+                <p>
+                    A tela <strong>Contas a Pagar</strong> reúne em um único lugar despesas,
+                    parcelas, recorrências e faturas que ainda precisam ser pagas.
+                </p>
+                <ol>
+                    <li>Acesse <strong>Contas a Pagar</strong>.</li>
+                    <li>Use os filtros para localizar o compromisso.</li>
+                    <li>Clique em <strong>Pagar</strong>.</li>
+                    <li>Selecione a conta utilizada e informe a data do pagamento.</li>
+                    <li>Confirme e depois confira a saída em <strong>Movimentações</strong>.</li>
+                </ol>
+                <div class="manual-alerta">
+                    Para uma conta recorrente, o pagamento vale somente para aquela ocorrência e não encerra a recorrência inteira.
                 </div>
 
                 <h3 id="duvida-movimentacoes">Para que serve Movimentações?</h3>
@@ -435,7 +508,7 @@
                 <p>Porque o dinheiro sai da conta no pagamento da fatura, e não na data da compra.</p>
 
                 <h3>Previsão de despesas e Cartão em aberto podem mostrar valores diferentes?</h3>
-                <p>Sim. A previsão considera o mês consultado; Cartão em aberto soma as faturas abertas/fechadas ainda não pagas, inclusive futuras.</p>
+                <p>Sim. A Previsão reúne todos os compromissos ainda não pagos do mês consultado. Já o card Cartão em aberto mostra somente o saldo restante das faturas que vencem no mês atual.</p>
 
                 <h3>Posso apagar uma recorrência que não uso mais?</h3>
                 <p>O caminho mais seguro é desativá-la, preservando o histórico e evitando projeções futuras.</p>

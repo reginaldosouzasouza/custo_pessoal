@@ -54,6 +54,17 @@ class ManualFinanceiroService
     private function detectarTopico(string $texto): ?string
     {
         $topicos = [
+            'contas_a_pagar' => [
+                'para que serve contas a pagar',
+                'como funciona contas a pagar',
+                'contas a pagar',
+                'pagar conta',
+                'pagar contas',
+                'onde pagar contas',
+                'como pagar uma recorrencia',
+                'como pagar recorrencia',
+            ],
+
             'duplicidade_cartao' => [
                 'posso lancar compra do cartao como despesa',
                 'lancar compra do cartao como despesa',
@@ -155,7 +166,8 @@ class ManualFinanceiroService
                 'dashboard',
                 'resumo financeiro',
                 'saldo atual',
-                'a vencer',
+                'despesas pagas do mes',
+                'previsao de despesas',
                 'cartao em aberto',
                 'proximo mes',
             ],
@@ -195,6 +207,7 @@ class ManualFinanceiroService
             'compras_cartao' => 'duvida-compra-cartao',
             'fatura' => 'duvida-fatura',
             'previsao' => 'duvida-previsao',
+            'contas_a_pagar' => 'duvida-contas-pagar',
             'movimentacoes' => 'duvida-movimentacoes',
             'duplicidade_cartao' => 'duvida-duplicidade-cartao',
             default => 'duvidas',
@@ -244,36 +257,48 @@ class ManualFinanceiroService
                 . "A transferência não é receita nem despesa. O valor apenas sai de uma conta e entra em outra.",
 
             'recorrencias' =>
-                "Para cadastrar uma conta fixa:\n"
+                "Para cadastrar uma conta fixa/recorrente:\n"
                 . "1. Acesse Contas Fixas e clique em + Nova recorrência.\n"
-                . "2. Informe a descrição da conta, categoria, forma de pagamento e o valor padrão.\n"
-                . "3. Escolha a frequência: semanal, mensal, trimestral, semestral ou anual.\n"
-                . "4. É essa frequência que informa ao sistema com que periodicidade a conta deve voltar a aparecer nas previsões.\n"
-                . "5. Informe o dia de vencimento e a data de início.\n"
-                . "6. Se a conta tiver prazo para terminar, informe também a data final.\n"
-                . "7. Se a data final ficar em branco, a recorrência continuará sendo considerada por tempo indeterminado, enquanto estiver ativa.\n"
-                . "8. Salve.\n\n"
-                . "Exemplo: uma conta de luz mensal, com vencimento todo dia 15, iniciada em setembro e sem data final, aparecerá na Previsão de Despesas de setembro, outubro, novembro, dezembro e nos meses seguintes.\n\n"
-                . "Se em algum momento essa conta deixar de existir, o recomendado é desativar a recorrência. Assim ela deixa de aparecer nas previsões futuras sem apagar o histórico.",
+                . "2. Informe a descrição, categoria, forma de pagamento e o valor padrão.\n"
+                . "3. Escolha a frequência disponível: diária, a cada 3 dias, a cada 5 dias, semanal, mensal, trimestral, semestral ou anual.\n"
+                . "4. Informe a data de início e, quando aplicável, o dia de vencimento.\n"
+                . "5. Se a conta tiver prazo para terminar, informe a data final.\n"
+                . "6. Se a data final ficar em branco, a recorrência continuará ativa por tempo indeterminado.\n"
+                . "7. Salve.\n\n"
+                . "A recorrência é a regra de repetição. Quando uma ocorrência for realmente paga, faça a baixa em Contas a Pagar. O sistema registra aquela ocorrência como despesa real sem encerrar a recorrência.\n\n"
+                . "Se a conta deixar de existir, o recomendado é desativar a recorrência para preservar o histórico.",
 
             'fatura' =>
                 "Para pagar uma fatura:\n"
-                . "1. Acesse Faturas.\n"
-                . "2. Use o filtro para localizar a fatura que deseja pagar.\n"
+                . "1. Acesse Faturas ou Contas a Pagar.\n"
+                . "2. Localize a fatura desejada.\n"
                 . "3. Clique em Pagar.\n"
                 . "4. Selecione a conta/carteira de pagamento.\n"
                 . "5. Informe ou confira a data do pagamento.\n"
-                . "6. Confirme o pagamento.\n\n"
-                . "Depois da confirmação, o valor da fatura passa a representar uma saída real de dinheiro e afeta o saldo da conta.",
+                . "6. Confirme.\n\n"
+                . "A tela Faturas permite consultar compromissos atuais e futuros. No Dashboard, o card Cartão em aberto mostra somente o saldo das faturas ainda não pagas que vencem no mês atual.",
 
             'previsao' =>
                 "Para usar a Previsão de Despesas:\n"
                 . "1. Acesse Previsão de Despesas.\n"
                 . "2. Escolha o mês que deseja consultar.\n"
-                . "3. Confira os compromissos previstos para o período.\n"
-                . "4. A tela reúne despesas lançadas, contas recorrentes previstas e faturas com vencimento no mês.\n"
-                . "5. Use essa visão antes de assumir novos compromissos.\n\n"
-                . "Importante: Previsão de Despesas é compromisso do período. Despesas do mês mostra o que já foi efetivamente pago.",
+                . "3. Confira os compromissos ainda não pagos do período.\n"
+                . "4. A tela reúne despesas pendentes, parcelas pendentes, recorrências previstas e faturas abertas/fechadas com vencimento no mês.\n"
+                . "5. Faturas já pagas não entram na previsão.\n"
+                . "6. Quando houver valor já pago em uma fatura, considera-se apenas o saldo restante.\n\n"
+                . "Importante: Previsão de Despesas mostra o que ainda está comprometido.",
+
+            'contas_a_pagar' =>
+                "A tela Contas a Pagar centraliza as obrigações que ainda precisam ser quitadas.\n"
+                . "Ela reúne despesas pendentes, parcelas pendentes, ocorrências de recorrências e faturas ainda não pagas.\n\n"
+                . "Para usar:\n"
+                . "1. Acesse Contas a Pagar.\n"
+                . "2. Use os filtros de mês, vencimento, categoria, origem, descrição ou situação.\n"
+                . "3. O campo Mês pode ficar em branco para uma consulta mais ampla.\n"
+                . "4. Localize o compromisso e clique em Pagar.\n"
+                . "5. Confira o valor, selecione a conta e informe a data do pagamento.\n"
+                . "6. Confirme.\n\n"
+                . "Nas recorrências, o pagamento quita somente aquela ocorrência. A regra recorrente continua ativa para os próximos vencimentos.",
 
             'compras_cartao' =>
                 "Para registrar uma compra no cartão:\n"
@@ -309,7 +334,8 @@ class ManualFinanceiroService
             'dashboard' =>
                 "O Dashboard é o resumo financeiro do SGA Finanças. "
                 . "Ele apresenta o realizado, o saldo disponível e os compromissos futuros. "
-                . "Use-o para acompanhar Receitas do mês, Despesas do mês, Previsão de Despesas, Saldo atual, A vencer, Cartão em aberto e Próximo mês.",
+                . "Use-o para acompanhar Receitas do mês, Despesas Pagas do mês, Previsão de Despesas, Saldo atual, Cartão em aberto e Próximo mês. "
+                . "O card Cartão em aberto considera somente faturas ainda não pagas com vencimento no mês atual.",
 
             default =>
                 "Ainda não encontrei essa orientação no manual do SGA Finanças.",
