@@ -358,6 +358,89 @@
         color:#6b7280;
     }
 
+
+    .contas-mobile-list {
+        display:none;
+    }
+
+    .conta-mobile-card {
+        border:1px solid #e5e7eb;
+        border-radius:12px;
+        padding:14px;
+        background:#fff;
+    }
+
+    .conta-mobile-card + .conta-mobile-card {
+        margin-top:12px;
+    }
+
+    .conta-mobile-top {
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+        gap:12px;
+        margin-bottom:10px;
+    }
+
+    .conta-mobile-descricao {
+        min-width:0;
+        flex:1;
+        color:#111827;
+        font-size:13px;
+        font-weight:700;
+        line-height:1.35;
+        word-break:break-word;
+    }
+
+    .conta-mobile-valor {
+        color:#7653cb;
+        font-size:14px;
+        font-weight:700;
+        white-space:nowrap;
+        text-align:right;
+    }
+
+    .conta-mobile-dados {
+        display:grid;
+        grid-template-columns:1fr;
+        gap:7px;
+        margin-top:8px;
+    }
+
+    .conta-mobile-linha {
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:14px;
+        padding-top:7px;
+        border-top:1px solid #f1f5f9;
+        font-size:11px;
+    }
+
+    .conta-mobile-label {
+        color:#6b7280;
+        font-weight:600;
+        flex-shrink:0;
+    }
+
+    .conta-mobile-conteudo {
+        color:#374151;
+        text-align:right;
+        min-width:0;
+        word-break:break-word;
+    }
+
+    .conta-mobile-acoes {
+        margin-top:12px;
+        padding-top:10px;
+        border-top:1px solid #e5e7eb;
+    }
+
+    .conta-mobile-acoes .btn-pagar {
+        width:100%;
+        min-height:36px;
+    }
+
     @media(max-width:1250px) {
         .filtros-grid {
             grid-template-columns:repeat(3, minmax(0, 1fr));
@@ -390,11 +473,61 @@
         }
 
         .cards-resumo {
-            grid-template-columns:1fr;
+            grid-template-columns:repeat(2, minmax(0, 1fr));
+            gap:10px;
+        }
+
+        .cards-resumo .resumo-card:nth-child(3) {
+            grid-column:1 / -1;
+        }
+
+        .resumo-card {
+            padding:14px;
+        }
+
+        .resumo-label {
+            font-size:10px;
+            margin-bottom:4px;
+        }
+
+        .resumo-valor {
+            font-size:19px;
+        }
+
+        .table-card {
+            padding:12px;
+            overflow-x:visible;
+        }
+
+        .contas-table {
+            display:none;
+        }
+
+        .contas-mobile-list {
+            display:block;
         }
 
         .modal-box {
             max-width:100%;
+        }
+
+        .modal-footer {
+            flex-direction:column-reverse;
+        }
+
+        .btn-cancelar-modal,
+        .btn-confirmar {
+            width:100%;
+        }
+    }
+
+    @media(max-width:390px) {
+        .cards-resumo {
+            grid-template-columns:1fr;
+        }
+
+        .cards-resumo .resumo-card:nth-child(3) {
+            grid-column:auto;
         }
     }
 </style>
@@ -1301,12 +1434,236 @@
 
         </table>
 
+        <div class="contas-mobile-list">
+
+            @foreach($itens as $index => $item)
+
+                @php
+
+                    $tipo =
+                        $item['tipo']
+                        ?? 'despesa';
+
+                    $classeOrigem =
+                        match($tipo) {
+                            'recorrente' =>
+                                'origem-recorrente',
+
+                            'parcela' =>
+                                'origem-parcela',
+
+                            'fatura' =>
+                                'origem-fatura',
+
+                            default =>
+                                'origem-despesa',
+                        };
+
+                    $situacao =
+                        strtolower(
+                            $item['situacao']
+                            ?? 'pendente'
+                        );
+
+                    $dataVencimento =
+                        !empty(
+                            $item['vencimento']
+                        )
+                            ? \Carbon\Carbon::parse(
+                                $item['vencimento']
+                            )->startOfDay()
+                            : null;
+
+                    $estaVencida =
+                        $dataVencimento
+                        &&
+                        $dataVencimento->lt(
+                            today()
+                        );
+
+                    $classeSituacao =
+                        $estaVencida
+                            ? 'status-vencida'
+                            : match($situacao) {
+                                'aberta' =>
+                                    'status-aberta',
+
+                                'fechada' =>
+                                    'status-fechada',
+
+                                'prevista' =>
+                                    'status-prevista',
+
+                                default =>
+                                    'status-pendente',
+                            };
+
+                    $textoSituacao =
+                        $estaVencida
+                            ? 'Vencida'
+                            : match($situacao) {
+                                'aberta' =>
+                                    'Aberta',
+
+                                'fechada' =>
+                                    'Fechada',
+
+                                'prevista' =>
+                                    'Prevista',
+
+                                default =>
+                                    'Pendente',
+                            };
+
+                    $vencimentoFormatado =
+                        $dataVencimento
+                            ? $dataVencimento
+                                ->format('d/m/Y')
+                            : '-';
+
+                    $vencimentoBanco =
+                        $dataVencimento
+                            ? $dataVencimento
+                                ->format('Y-m-d')
+                            : null;
+
+                    $modalId =
+                        'modal-pagamento-'
+                        . $tipo
+                        . '-'
+                        . $item['id']
+                        . '-'
+                        . $index;
+
+                @endphp
+
+
+                <div class="conta-mobile-card">
+
+                    <div class="conta-mobile-top">
+
+                        <div class="conta-mobile-descricao">
+                            {{ $item['descricao'] }}
+                        </div>
+
+                        <div class="conta-mobile-valor">
+
+                            @if(
+                                $tipo === 'recorrente'
+                                &&
+                                ($item['tipo_valor'] ?? null)
+                                    === 'variavel'
+                                &&
+                                (float) $item['valor'] <= 0
+                            )
+
+                                A informar
+
+                            @else
+
+                                R$
+                                {{ number_format(
+                                    $item['valor'],
+                                    2,
+                                    ',',
+                                    '.'
+                                ) }}
+
+                            @endif
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="conta-mobile-dados">
+
+                        <div class="conta-mobile-linha">
+                            <span class="conta-mobile-label">
+                                Categoria
+                            </span>
+
+                            <span class="conta-mobile-conteudo">
+                                {{ $item['categoria'] ?? '-' }}
+                            </span>
+                        </div>
+
+
+                        <div class="conta-mobile-linha">
+                            <span class="conta-mobile-label">
+                                Origem
+                            </span>
+
+                            <span class="conta-mobile-conteudo">
+                                <span class="origem {{ $classeOrigem }}">
+                                    {{ $item['origem'] }}
+                                </span>
+                            </span>
+                        </div>
+
+
+                        <div class="conta-mobile-linha">
+                            <span class="conta-mobile-label">
+                                Vencimento
+                            </span>
+
+                            <span class="
+                                conta-mobile-conteudo
+                                {{ $estaVencida ? 'vencido' : '' }}
+                            ">
+                                {{ $vencimentoFormatado }}
+                            </span>
+                        </div>
+
+
+                        <div class="conta-mobile-linha">
+                            <span class="conta-mobile-label">
+                                Situação
+                            </span>
+
+                            <span class="conta-mobile-conteudo">
+                                <span class="status {{ $classeSituacao }}">
+                                    {{ $textoSituacao }}
+                                </span>
+                            </span>
+                        </div>
+
+                    </div>
+
+
+                    <div class="conta-mobile-acoes">
+
+                        <button
+                            type="button"
+                            class="btn-pagar"
+                            onclick="abrirModal('{{ $modalId }}')"
+                        >
+                            Pagar
+                        </button>
+
+                    </div>
+
+                </div>
+
+            @endforeach
+
+        </div>
+
+
     @else
 
         <div class="empty-state">
 
-            Nenhuma conta a pagar encontrada para
-            {{ $inicioMes->translatedFormat('F/Y') }}.
+            @if($inicioMes)
+
+                Nenhuma conta a pagar encontrada para
+                {{ $inicioMes->translatedFormat('F/Y') }}.
+
+            @else
+
+                Nenhuma conta a pagar encontrada com os filtros informados.
+
+            @endif
 
         </div>
 
