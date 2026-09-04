@@ -279,11 +279,24 @@ class PrevisaoDespesaController extends Controller
                     $fimMes->toDateString(),
                 ]
             )
+            ->whereIn(
+                'situacao',
+                [
+                    'aberta',
+                    'fechada',
+                ]
+            )
             ->get();
 
         foreach ($faturas as $fatura) {
+
             $valor =
-                (float) $fatura->valor_total;
+                (float) $fatura->valor_total
+                - (float) $fatura->valor_pago;
+
+            if ($valor <= 0) {
+                continue;
+            }
 
             $itens->push([
                 'tipo' =>

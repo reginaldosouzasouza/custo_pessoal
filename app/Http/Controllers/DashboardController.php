@@ -228,7 +228,20 @@ class DashboardController extends Controller
         |
         */
 
-        $cartaoEmAberto = Fatura::query()
+        /*
+        |--------------------------------------------------------------------------
+        | CARTÃO EM ABERTO - MÊS ATUAL
+        |--------------------------------------------------------------------------
+        |
+        | O card do Dashboard mostra somente as faturas ainda não pagas
+        | com vencimento dentro do mês atual.
+        |
+        | Consideramos apenas o saldo restante:
+        | valor_total - valor_pago.
+        |
+        */
+
+        $cartaoEmAberto = (float) Fatura::query()
             ->where('user_id', $userId)
             ->whereIn(
                 'situacao',
@@ -237,7 +250,42 @@ class DashboardController extends Controller
                     'fechada',
                 ]
             )
-            ->sum('valor_total');
+            ->whereBetween(
+                'data_vencimento',
+                [
+                    $inicioMes,
+                    $fimMes,
+                ]
+            )
+            ->selectRaw(
+                'COALESCE(SUM(GREATEST(valor_total - COALESCE(valor_pago, 0), 0)), 0) as total'
+            )
+            ->value('total');
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | TOTAL GERAL EM ABERTO NOS CARTÕES
+        |--------------------------------------------------------------------------
+        |
+        | Mantido separadamente porque a previsão total a pagar considera
+        | todas as faturas ainda não pagas, inclusive meses futuros.
+        |
+        */
+
+        $cartaoTotalEmAberto = (float) Fatura::query()
+            ->where('user_id', $userId)
+            ->whereIn(
+                'situacao',
+                [
+                    'aberta',
+                    'fechada',
+                ]
+            )
+            ->selectRaw(
+                'COALESCE(SUM(GREATEST(valor_total - COALESCE(valor_pago, 0), 0)), 0) as total'
+            )
+            ->value('total');
 
 
         /*
@@ -450,8 +498,7 @@ class DashboardController extends Controller
         */
 
         $faturasProximoMes =
-            (float)
-            Fatura::query()
+            (float) Fatura::query()
                 ->where(
                     'user_id',
                     $userId
@@ -470,7 +517,10 @@ class DashboardController extends Controller
                         'fechada',
                     ]
                 )
-                ->sum('valor_total');
+                ->selectRaw(
+                    'COALESCE(SUM(GREATEST(valor_total - COALESCE(valor_pago, 0), 0)), 0) as total'
+                )
+                ->value('total');
 
 
         /*
@@ -518,6 +568,33 @@ class DashboardController extends Controller
 
         $totalDespesasPrevistasMes =
             (float) $queryDespesasPrevistasMes
+                ->sum('valor');
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | PARCELAS PREVISTAS DO MÊS
+        |--------------------------------------------------------------------------
+        */
+
+        $totalParcelasPrevistasMes =
+            (float)
+            Parcela::query()
+                ->where(
+                    'user_id',
+                    $userId
+                )
+                ->where(
+                    'situacao',
+                    'pendente'
+                )
+                ->whereBetween(
+                    'data_vencimento',
+                    [
+                        $inicioMes,
+                        $fimMes,
+                    ]
+                )
                 ->sum('valor');
 
 
@@ -597,20 +674,35 @@ class DashboardController extends Controller
         }
 
 
-        $totalFaturasPrevistasMes = Fatura::query()
-            ->where('user_id', $userId)
-            ->whereBetween(
-                'data_vencimento',
-                [
-                    $inicioMes,
-                    $fimMes,
-                ]
-            )
-            ->sum('valor_total');
+        $totalFaturasPrevistasMes =
+            (float) Fatura::query()
+                ->where(
+                    'user_id',
+                    $userId
+                )
+                ->whereBetween(
+                    'data_vencimento',
+                    [
+                        $inicioMes,
+                        $fimMes,
+                    ]
+                )
+                ->whereIn(
+                    'situacao',
+                    [
+                        'aberta',
+                        'fechada',
+                    ]
+                )
+                ->selectRaw(
+                    'COALESCE(SUM(GREATEST(valor_total - COALESCE(valor_pago, 0), 0)), 0) as total'
+                )
+                ->value('total');
 
 
         $previsaoDespesasMes =
             (float) $totalDespesasPrevistasMes
+            + (float) $totalParcelasPrevistasMes
             + (float) $totalRecorrentesPrevistasMes
             + (float) $totalFaturasPrevistasMes;
 
@@ -651,7 +743,7 @@ class DashboardController extends Controller
         $previsaoAPagar =
             (float) $todasDespesasPendentes
             + (float) $todasParcelasPendentes
-            + (float) $cartaoEmAberto;
+            + (float) $cartaoTotalEmAberto;
 
 
         /*
@@ -1291,44 +1383,95 @@ class DashboardController extends Controller
                 : null;
 
 
-        if (
-            $recorrencia->frequencia
-            === 'semanal'
-        ) {
+        /*
+        |--------------------------------------------------------------------------
+        | FREQUÊNCIAS BASEADAS EM DIAS
+        |--------------------------------------------------------------------------
+        |
+        | A contagem parte sempre de data_inicio e não reinicia
+        | na mudança do mês.
+        |
+        */
 
-            $data = $inicioRecorrencia->copy();
+        $intervaloDias =
+            match ($recorrencia->frequencia) {
+                'diaria' => 1,
+                'cada_3_dias' => 3,
+                'cada_5_dias' => 5,
+                'semanal' => 7,
+                default => null,
+            };
 
-            while ($data->lt($inicioMes)) {
-                $data->addWeek();
+
+        if ($intervaloDias !== null) {
+
+            $data =
+                $inicioRecorrencia->copy();
+
+
+            if ($data->lt($inicioMes)) {
+
+                $diasDecorridos =
+                    (int) $inicioRecorrencia
+                        ->diffInDays(
+                            $inicioMes
+                        );
+
+                $resto =
+                    $diasDecorridos
+                    % $intervaloDias;
+
+                $data =
+                    $inicioMes->copy();
+
+                if ($resto !== 0) {
+
+                    $data->addDays(
+                        $intervaloDias
+                        - $resto
+                    );
+                }
             }
+
 
             while ($data->lte($fimMes)) {
 
                 if (
                     !$fimRecorrencia
-                    || $data->lte($fimRecorrencia)
+                    || $data->lte(
+                        $fimRecorrencia
+                    )
                 ) {
+
                     $resultado->push(
                         $data->copy()
                     );
                 }
 
-                $data->addWeek();
+                $data->addDays(
+                    $intervaloDias
+                );
             }
+
 
             return $resultado;
         }
 
 
-        $intervaloMeses = match (
-            $recorrencia->frequencia
-        ) {
-            'mensal' => 1,
-            'trimestral' => 3,
-            'semestral' => 6,
-            'anual' => 12,
-            default => null,
-        };
+        /*
+        |--------------------------------------------------------------------------
+        | FREQUÊNCIAS BASEADAS EM MESES
+        |--------------------------------------------------------------------------
+        */
+
+        $intervaloMeses =
+            match ($recorrencia->frequencia) {
+                'mensal' => 1,
+                'trimestral' => 3,
+                'semestral' => 6,
+                'anual' => 12,
+                default => null,
+            };
 
 
         if (!$intervaloMeses) {
@@ -1336,15 +1479,17 @@ class DashboardController extends Controller
         }
 
 
-        $mesInicio = $inicioRecorrencia
-            ->copy()
-            ->startOfMonth();
+        $mesInicio =
+            $inicioRecorrencia
+                ->copy()
+                ->startOfMonth();
 
         $diferencaMeses =
-            $mesInicio->diffInMonths(
-                $inicioMes,
-                false
-            );
+            $mesInicio
+                ->diffInMonths(
+                    $inicioMes,
+                    false
+                );
 
 
         if ($diferencaMeses < 0) {
@@ -1367,15 +1512,16 @@ class DashboardController extends Controller
                 ?: $inicioRecorrencia->day
             );
 
-        $dia = min(
-            $dia,
-            $inicioMes->daysInMonth
-        );
+        $dia =
+            min(
+                $dia,
+                $inicioMes->daysInMonth
+            );
 
-
-        $vencimento = $inicioMes
-            ->copy()
-            ->day($dia);
+        $vencimento =
+            $inicioMes
+                ->copy()
+                ->day($dia);
 
 
         if (

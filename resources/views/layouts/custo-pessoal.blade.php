@@ -628,9 +628,19 @@
             </a>
 
 
-            <a href="{{ url('/contas') }}"
+            <a href="{{ route('contas-a-pagar.index') }}"
                class="cp-menu-link
-               {{ request()->is('contas*') ? 'active' : '' }}">
+               {{ request()->routeIs('contas-a-pagar.*') ? 'active' : '' }}">
+
+                <span class="cp-menu-icon">▤</span>
+                <span>Contas a Pagar</span>
+
+            </a>
+
+
+            <a href="{{ route('contas.index') }}"
+               class="cp-menu-link
+               {{ request()->routeIs('contas.*') ? 'active' : '' }}">
 
                 <span class="cp-menu-icon">▥</span>
                 <span>Contas e Carteiras</span>

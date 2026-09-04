@@ -19,6 +19,7 @@ use App\Http\Controllers\PrevisaoDespesaController;
 use App\Http\Controllers\ParcelamentoController;
 use App\Http\Controllers\RelatorioDespesasController;
 use App\Http\Controllers\AssistenteFinanceiroController;
+use App\Http\Controllers\ContaPagarController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -320,6 +321,16 @@ Route::middleware('auth')->group(function () {
             return view('manual-financeiro.index');
         }
     )->name('manual-financeiro.index');
+
+   Route::get(
+        '/contas-a-pagar',
+        [ContaPagarController::class, 'index']
+    )->name('contas-a-pagar.index');
+
+    Route::post(
+        '/contas-a-pagar/recorrencias/{recorrencia}/pagar',
+        [ContaPagarController::class, 'pagarRecorrencia']
+    )->name('contas-a-pagar.recorrencias.pagar');
 
 
 });

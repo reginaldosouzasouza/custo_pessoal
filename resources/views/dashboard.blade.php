@@ -573,7 +573,7 @@
 
         <div>
             <div class="summary-title saldo-title">
-                Despesas do mês
+                Despesas Pagas do mês
 
                 <span class="saldo-help">
                     ?
@@ -652,7 +652,7 @@
                     ?
                     <span class="saldo-tooltip">
                         Saldo atual é a soma do dinheiro disponível
-                        em todas as suas contas e carteiras ativas.
+                        em todas as suas contas bancárias e Digital,  e as carteiras ativas.
                         Não representa apenas receitas menos despesas do mês.
                     </span>
                 </span>
@@ -709,40 +709,6 @@
     </div>
 
 
-    {{-- A VENCER --}}
-    <div class="cp-card summary-card">
-
-        <div class="summary-icon icon-orange">
-            ◷
-        </div>
-
-        <div>
-            <div class="summary-title saldo-title">
-                A vencer
-
-                <span class="saldo-help">
-                    ?
-                    <span class="saldo-tooltip">
-                        Mostra as despesas e parcelas pendentes
-                        que vencem de hoje até o final do mês atual.
-                    </span>
-                </span>
-            </div>
-
-            <div class="summary-value value-orange">
-                R$ {{ number_format($aVencer ?? 0, 2, ',', '.') }}
-            </div>
-
-            <div class="summary-note">
-                Contas a pagar
-            </div>
-        </div>
-
-    </div>
-
-
-
-
     {{-- CARTÃO --}}
     <div class="cp-card summary-card">
 
@@ -758,8 +724,9 @@
                 <span class="saldo-help">
                     ?
                     <span class="saldo-tooltip">
-                        Soma das faturas de cartão que ainda não foram pagas.
-                        A compra no cartão não reduz o saldo da conta até o pagamento da fatura.
+                       Saldo das faturas de cartão
+                        que vencem no mês atual e ainda não foram pagas.
+                        Faturas de meses futuros não entram neste card.
                     </span>
                 </span>
             </div>
@@ -769,7 +736,7 @@
             </div>
 
             <div class="summary-note">
-                Faturas em aberto
+                Faturas do mês em aberto
             </div>
         </div>
 
