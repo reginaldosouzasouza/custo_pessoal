@@ -1,8 +1,52 @@
 <style>
 .sga-assistente-botao{
-    position:fixed;right:22px;bottom:22px;width:58px;height:58px;border:0;
-    border-radius:50%;background:#0d6efd;color:#fff;font-size:24px;cursor:pointer;
-    z-index:1500;box-shadow:0 10px 30px rgba(13,110,253,.30)
+    position:fixed;
+    right:22px;
+    bottom:22px;
+    width:62px;
+    height:62px;
+    border-radius:50%;
+    background:#fff;
+    padding:0;
+    overflow:hidden;
+    cursor:pointer;
+    z-index:1500;
+    border:3px solid #0d6efd;
+    box-shadow:0 10px 30px rgba(13,110,253,.30);
+    animation: pulseAssistente 1.8s infinite;
+    transition: transform .2s ease;
+}
+
+.sga-assistente-botao img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+}
+
+.sga-assistente-botao:hover{
+    transform: scale(1.08);
+}
+
+.sga-assistente-identidade{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    min-width:0;
+}
+
+.sga-assistente-avatar{
+    width:42px;
+    height:42px;
+    border-radius:50%;
+    object-fit:cover;
+    flex-shrink:0;
+    background:#fff;
+    border:2px solid rgba(255,255,255,.9);
+}
+
+.sga-assistente-textos{
+    min-width:0;
 }
 .sga-assistente-painel{
     position:fixed;right:22px;bottom:92px;width:min(390px,calc(100vw - 30px));
@@ -11,6 +55,7 @@
     z-index:1500;box-shadow:0 20px 55px rgba(15,23,42,.22)
 }
 .sga-assistente-painel.aberto{display:flex}
+.sga-assistente-painel *{box-sizing:border-box}
 .sga-assistente-topo{
     padding:15px 16px;background:linear-gradient(135deg,#07345c,#0d6efd);
     color:#fff;display:flex;align-items:center;justify-content:space-between;gap:12px;
@@ -72,6 +117,23 @@
     min-width:70px;border:0;border-radius:10px;padding:0 13px;background:#0d6efd;
     color:#fff;font-weight:600;cursor:pointer
 }
+
+
+@keyframes pulseAssistente {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(13, 110, 253, 0.45);
+    }
+    50% {
+        transform: scale(1.06);
+        box-shadow: 0 0 0 12px rgba(13, 110, 253, 0);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(13, 110, 253, 0);
+    }
+}
+
 .sga-assistente-enviar:disabled{opacity:.6;cursor:wait}
 
 @media(max-width:768px){
@@ -90,31 +152,56 @@
     id="sgaAssistenteBotao"
     aria-label="Abrir assistente financeiro"
     title="Assistente SGA Finanças"
->?</button>
+>
+    <img
+        src="{{ asset('images/assistente-financeiro.png') }}"
+        alt="Assistente SGA Finanças"
+    >
+</button>
 
 <section
     class="sga-assistente-painel"
     id="sgaAssistentePainel"
     aria-label="Assistente SGA Finanças"
->
+>   
     <div class="sga-assistente-topo">
-        <div>
-            <div class="sga-assistente-titulo">Assistente SGA Finanças</div>
-            <div class="sga-assistente-subtitulo">Consulte seus dados financeiros</div>
+
+    <div class="sga-assistente-identidade">
+
+        <img
+            src="{{ asset('images/assistente-financeiro.png') }}"
+            alt="Assistente SGA Finanças"
+            class="sga-assistente-avatar"
+        >
+
+        <div class="sga-assistente-textos">
+
+            <div class="sga-assistente-titulo">
+                Assistente SGA Finanças
+            </div>
+
+            <div class="sga-assistente-subtitulo">
+                Seu assistente inteligente financeiro
+            </div>
+
         </div>
 
+    </div>
         <button
             type="button"
             class="sga-assistente-fechar"
             id="sgaAssistenteFechar"
             aria-label="Fechar assistente"
         >×</button>
+
     </div>
 
     <div class="sga-assistente-mensagens" id="sgaAssistenteMensagens">
         <div class="sga-assistente-msg bot">
-            Olá! Posso responder sobre gastos do mês, pendências, atrasos,
-            próximos vencimentos, categorias e também sobre o Manual do sistema.
+
+            Olá! Eu sou o Assistente SGA Finanças. Posso ajudar com gastos do mês,
+            pendências, atrasos, próximos vencimentos, categorias e também com o Manual do sistema.
+            Pode perguntar com áudio, ou digitar se preferir, ou escolher uma das opções abaixo.
         </div>
     </div>
 
