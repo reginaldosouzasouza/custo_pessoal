@@ -283,6 +283,150 @@
         cursor:pointer;
     }
 
+
+    .compras-mobile-list {
+        display:none;
+    }
+
+    .compra-mobile-card {
+        border:1px solid #e5e7eb;
+        border-radius:12px;
+        padding:14px;
+        background:#fff;
+    }
+
+    .compra-mobile-card + .compra-mobile-card {
+        margin-top:12px;
+    }
+
+    .compra-mobile-top {
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+        gap:12px;
+        margin-bottom:10px;
+    }
+
+    .compra-mobile-descricao {
+        min-width:0;
+        flex:1;
+        color:#111827;
+        font-size:13px;
+        font-weight:700;
+        line-height:1.35;
+        word-break:break-word;
+    }
+
+    .compra-mobile-data {
+        color:#6b7280;
+        font-size:10px;
+        margin-top:3px;
+    }
+
+    .compra-mobile-valor {
+        color:#7653cb;
+        font-size:14px;
+        font-weight:700;
+        white-space:nowrap;
+        text-align:right;
+    }
+
+    .compra-mobile-dados {
+        display:grid;
+        grid-template-columns:1fr;
+        gap:7px;
+        margin-top:8px;
+    }
+
+    .compra-mobile-linha {
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:14px;
+        padding-top:7px;
+        border-top:1px solid #f1f5f9;
+        font-size:11px;
+    }
+
+    .compra-mobile-label {
+        color:#6b7280;
+        font-weight:600;
+        flex-shrink:0;
+    }
+
+    .compra-mobile-conteudo {
+        color:#374151;
+        text-align:right;
+        min-width:0;
+        word-break:break-word;
+    }
+
+    .compra-mobile-acoes {
+        margin-top:12px;
+        padding-top:10px;
+        border-top:1px solid #e5e7eb;
+    }
+
+    .compra-mobile-acoes .btn-detalhes {
+        width:100%;
+        min-height:36px;
+    }
+
+    .parcelas-mobile-list {
+        display:none;
+    }
+
+    .parcela-mobile-card {
+        border:1px solid #e5e7eb;
+        border-radius:10px;
+        padding:11px;
+        background:#fff;
+    }
+
+    .parcela-mobile-card + .parcela-mobile-card {
+        margin-top:9px;
+    }
+
+    .parcela-mobile-top {
+        display:flex;
+        justify-content:space-between;
+        gap:10px;
+        align-items:center;
+        margin-bottom:8px;
+    }
+
+    .parcela-mobile-numero {
+        font-weight:700;
+        color:#111827;
+        font-size:12px;
+    }
+
+    .parcela-mobile-valor {
+        font-weight:700;
+        color:#7653cb;
+        white-space:nowrap;
+        font-size:12px;
+    }
+
+    .parcela-mobile-linha {
+        display:flex;
+        justify-content:space-between;
+        gap:12px;
+        padding-top:6px;
+        border-top:1px solid #f1f5f9;
+        font-size:10px;
+    }
+
+    .parcela-mobile-label {
+        color:#6b7280;
+        font-weight:600;
+    }
+
+    .parcela-mobile-conteudo {
+        text-align:right;
+        color:#374151;
+    }
+
     @media(max-width:700px) {
 
         .header-actions {
@@ -292,6 +436,43 @@
         .btn-primary,
         .btn-secondary {
             flex:1;
+        }
+
+        .table-card {
+            padding:12px;
+            overflow-x:visible;
+        }
+
+        .compras-table {
+            display:none;
+        }
+
+        .compras-mobile-list {
+            display:block;
+        }
+
+        dialog {
+            width:calc(100% - 20px);
+        }
+
+        .dialog-content {
+            padding:16px;
+        }
+
+        .parcelas-table {
+            display:none;
+        }
+
+        .parcelas-mobile-list {
+            display:block;
+        }
+
+        .dialog-subtitle {
+            line-height:1.5;
+        }
+
+        .pagination-wrap {
+            overflow-x:auto;
         }
     }
 </style>
@@ -552,6 +733,194 @@
 
         </table>
 
+        <div class="compras-mobile-list">
+
+            @foreach($compras as $compra)
+
+                @php
+
+                    $totalParcelas =
+                        $compra
+                            ->parcelas
+                            ->count();
+
+                    $parcelasPagas =
+                        $compra
+                            ->parcelas
+                            ->where(
+                                'situacao',
+                                'paga'
+                            )
+                            ->count();
+
+                    $parcelasPendentes =
+                        $totalParcelas
+                        - $parcelasPagas;
+
+                    $todasPagas =
+                        $totalParcelas > 0
+                        && $parcelasPendentes === 0;
+
+                @endphp
+
+                <div class="compra-mobile-card">
+
+                    <div class="compra-mobile-top">
+
+                        <div class="compra-mobile-descricao">
+
+                            {{ $compra->descricao }}
+
+                            <div class="compra-mobile-data">
+                                {{ $compra
+                                    ->data_compra
+                                    ->format('d/m/Y') }}
+                            </div>
+
+                        </div>
+
+                        <div class="compra-mobile-valor">
+                            R$
+                            {{ number_format(
+                                $compra->valor_total,
+                                2,
+                                ',',
+                                '.'
+                            ) }}
+                        </div>
+
+                    </div>
+
+
+                    <div class="compra-mobile-dados">
+
+                        <div class="compra-mobile-linha">
+                            <span class="compra-mobile-label">
+                                Cartão
+                            </span>
+
+                            <span class="compra-mobile-conteudo">
+                                {{ $compra
+                                    ->cartao
+                                    ?->nome
+                                    ?? '-' }}
+                            </span>
+                        </div>
+
+
+                        <div class="compra-mobile-linha">
+                            <span class="compra-mobile-label">
+                                Categoria
+                            </span>
+
+                            <span class="compra-mobile-conteudo">
+
+                                @if($compra->categoria?->icone)
+                                    {{ $compra->categoria->icone }}
+                                @endif
+
+                                {{ $compra
+                                    ->categoria
+                                    ?->nome
+                                    ?? '-' }}
+
+                            </span>
+                        </div>
+
+
+                        <div class="compra-mobile-linha">
+                            <span class="compra-mobile-label">
+                                Parcelas
+                            </span>
+
+                            <span class="compra-mobile-conteudo">
+
+                                @if(
+                                    $compra->quantidade_parcelas
+                                    > 1
+                                )
+
+                                    <span class="badge badge-parcelado">
+                                        {{ $compra->quantidade_parcelas }}x
+                                    </span>
+
+                                @else
+
+                                    <span class="badge badge-avista">
+                                        1x
+                                    </span>
+
+                                @endif
+
+                            </span>
+                        </div>
+
+
+                        <div class="compra-mobile-linha">
+                            <span class="compra-mobile-label">
+                                Resumo
+                            </span>
+
+                            <span class="compra-mobile-conteudo">
+                                {{ $parcelasPagas }} paga(s)
+                                •
+                                {{ $parcelasPendentes }} aberta(s)
+                            </span>
+                        </div>
+
+
+                        <div class="compra-mobile-linha">
+                            <span class="compra-mobile-label">
+                                Situação
+                            </span>
+
+                            <span class="compra-mobile-conteudo">
+
+                                @if($todasPagas)
+
+                                    <span class="badge badge-pago">
+                                        Quitada
+                                    </span>
+
+                                @else
+
+                                    <span class="badge badge-aberto">
+                                        Em andamento
+                                    </span>
+
+                                @endif
+
+                            </span>
+                        </div>
+
+                    </div>
+
+
+                    <div class="compra-mobile-acoes">
+
+                        <button
+                            type="button"
+                            class="btn-detalhes"
+                            onclick="
+                                document
+                                    .getElementById(
+                                        'parcelasCompra{{ $compra->id }}'
+                                    )
+                                    .showModal()
+                            "
+                        >
+                            Ver parcelas
+                        </button>
+
+                    </div>
+
+                </div>
+
+            @endforeach
+
+        </div>
+
+
 
         <div class="pagination-wrap">
 
@@ -734,6 +1103,113 @@
                 </tbody>
 
             </table>
+
+            <div class="parcelas-mobile-list">
+
+                @forelse(
+                    $compra
+                        ->parcelas
+                        ->sortBy(
+                            'numero_parcela'
+                        )
+                    as $parcela
+                )
+
+                    <div class="parcela-mobile-card">
+
+                        <div class="parcela-mobile-top">
+
+                            <div class="parcela-mobile-numero">
+                                Parcela
+                                {{ $parcela->numero_parcela }}
+                                /
+                                {{ $parcela->total_parcelas }}
+                            </div>
+
+                            <div class="parcela-mobile-valor">
+                                R$
+                                {{ number_format(
+                                    $parcela->valor,
+                                    2,
+                                    ',',
+                                    '.'
+                                ) }}
+                            </div>
+
+                        </div>
+
+
+                        <div class="parcela-mobile-linha">
+
+                            <span class="parcela-mobile-label">
+                                Competência
+                            </span>
+
+                            <span class="parcela-mobile-conteudo">
+                                {{ \Carbon\Carbon::createFromFormat(
+                                    'Y-m',
+                                    $parcela->competencia
+                                )->format('m/Y') }}
+                            </span>
+
+                        </div>
+
+
+                        <div class="parcela-mobile-linha">
+
+                            <span class="parcela-mobile-label">
+                                Vencimento
+                            </span>
+
+                            <span class="parcela-mobile-conteudo">
+                                {{ $parcela
+                                    ->data_vencimento
+                                    ->format('d/m/Y') }}
+                            </span>
+
+                        </div>
+
+
+                        <div class="parcela-mobile-linha">
+
+                            <span class="parcela-mobile-label">
+                                Situação
+                            </span>
+
+                            <span class="parcela-mobile-conteudo">
+
+                                @if(
+                                    $parcela->situacao
+                                    === 'paga'
+                                )
+
+                                    <span class="status status-paga">
+                                        Paga
+                                    </span>
+
+                                @else
+
+                                    <span class="status status-pendente">
+                                        Aberta
+                                    </span>
+
+                                @endif
+
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                @empty
+
+                    <div class="empty-state">
+                        Nenhuma parcela encontrada.
+                    </div>
+
+                @endforelse
+
+            </div>
 
 
             <div class="dialog-total">

@@ -75,9 +75,29 @@ class FaturaController extends Controller
             );
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | ORDENAÇÃO
+        |--------------------------------------------------------------------------
+        |
+        | 1. Faturas abertas primeiro
+        | 2. Depois fechadas
+        | 3. Depois pagas
+        | 4. Dentro de cada situação:
+        |    vencimento mais recente primeiro
+        |
+        */
         $faturas = $query
-            ->orderBy('data_vencimento')
-            ->orderBy('id')
+            ->orderByRaw("
+                CASE situacao
+                    WHEN 'aberta' THEN 1
+                    WHEN 'fechada' THEN 2
+                    WHEN 'paga' THEN 3
+                    ELSE 4
+                END
+            ")
+            ->orderByDesc('data_vencimento')
+            ->orderByDesc('id')
             ->get();
 
         $cartoes = \App\Models\Cartao::query()

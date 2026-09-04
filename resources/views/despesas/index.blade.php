@@ -247,9 +247,133 @@
         margin-top: 18px;
     }
 
+
+    .despesas-mobile-list {
+        display: none;
+    }
+
+    .despesa-mobile-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 14px;
+        background: #fff;
+    }
+
+    .despesa-mobile-card + .despesa-mobile-card {
+        margin-top: 12px;
+    }
+
+    .despesa-mobile-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 10px;
+    }
+
+    .despesa-mobile-descricao {
+        min-width: 0;
+        flex: 1;
+        color: #111827;
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.35;
+        word-break: break-word;
+    }
+
+    .despesa-mobile-valor {
+        color: #dc2626;
+        font-size: 14px;
+        font-weight: 700;
+        white-space: nowrap;
+        text-align: right;
+    }
+
+    .despesa-mobile-dados {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 7px;
+        margin-top: 8px;
+    }
+
+    .despesa-mobile-linha {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 14px;
+        padding-top: 7px;
+        border-top: 1px solid #f1f5f9;
+        font-size: 11px;
+    }
+
+    .despesa-mobile-label {
+        color: #6b7280;
+        font-weight: 600;
+        flex-shrink: 0;
+    }
+
+    .despesa-mobile-conteudo {
+        color: #374151;
+        text-align: right;
+        min-width: 0;
+        word-break: break-word;
+    }
+
+    .despesa-mobile-acoes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+        padding-top: 10px;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .despesa-mobile-acoes .btn-acao,
+    .despesa-mobile-acoes form {
+        flex: 1 1 auto;
+    }
+
+    .despesa-mobile-acoes .btn-acao {
+        width: 100%;
+        min-height: 34px;
+    }
+
     @media(max-width:650px) {
         .btn-novo {
             width: 100%;
+        }
+
+        .filtros {
+            display: grid;
+            grid-template-columns: 1fr;
+        }
+
+        .filtro-grupo,
+        .filtro-control,
+        .filtro-descricao,
+        .btn-filtrar,
+        .btn-limpar {
+            width: 100%;
+            min-width: 0;
+        }
+
+        .despesas-card {
+            padding: 12px;
+            overflow-x: visible;
+        }
+
+        .despesas-table {
+            width: 100%;
+            min-width: 0;
+        }
+
+        .despesas-table thead,
+        .despesas-table tbody > tr {
+            display: none;
+        }
+
+        .despesas-mobile-list {
+            display: block;
         }
     }
 </style>
@@ -1048,6 +1172,292 @@
         </tbody>
 
     </table>
+
+
+    <div class="despesas-mobile-list">
+
+        @forelse($lancamentos as $item)
+
+            @php
+
+                $atrasada =
+                    $item['situacao'] === 'pendente'
+                    && $item['data_vencimento']->isPast()
+                    && !$item['data_vencimento']->isToday();
+
+                $ehParcela =
+                    $item['tipo'] === 'parcela';
+
+                $model =
+                    $item['model'];
+
+            @endphp
+
+
+            <div class="despesa-mobile-card">
+
+                <div class="despesa-mobile-top">
+
+                    <div class="despesa-mobile-descricao">
+
+                        {{ $item['descricao'] }}
+
+                        @if($ehParcela)
+
+                            <span class="badge-parcelada">
+                                Parcelada
+                            </span>
+
+                        @endif
+
+                    </div>
+
+
+                    <div class="despesa-mobile-valor">
+                        R$
+                        {{ number_format(
+                            $item['valor'],
+                            2,
+                            ',',
+                            '.'
+                        ) }}
+                    </div>
+
+                </div>
+
+
+                <div class="despesa-mobile-dados">
+
+                    <div class="despesa-mobile-linha">
+                        <span class="despesa-mobile-label">
+                            Categoria
+                        </span>
+
+                        <span class="despesa-mobile-conteudo">
+                            {{ $item['categoria'] }}
+                        </span>
+                    </div>
+
+
+                    <div class="despesa-mobile-linha">
+                        <span class="despesa-mobile-label">
+                            Vencimento
+                        </span>
+
+                        <span class="despesa-mobile-conteudo">
+                            {{ $item['data_vencimento']->format('d/m/Y') }}
+                        </span>
+                    </div>
+
+
+                    <div class="despesa-mobile-linha">
+                        <span class="despesa-mobile-label">
+                            Pagamento
+                        </span>
+
+                        <span class="despesa-mobile-conteudo">
+                            {{ $item['data_pagamento']
+                                ? $item['data_pagamento']->format('d/m/Y')
+                                : '-' }}
+                        </span>
+                    </div>
+
+
+                    <div class="despesa-mobile-linha">
+                        <span class="despesa-mobile-label">
+                            Conta
+                        </span>
+
+                        <span class="despesa-mobile-conteudo">
+                            {{ $item['conta'] }}
+                        </span>
+                    </div>
+
+
+                    <div class="despesa-mobile-linha">
+                        <span class="despesa-mobile-label">
+                            Classificação
+                        </span>
+
+                        <span class="despesa-mobile-conteudo">
+
+                            @if($item['essencial'])
+
+                                <span class="essencial">
+                                    Essencial
+                                </span>
+
+                            @else
+
+                                <span class="nao-essencial">
+                                    Não essencial
+                                </span>
+
+                            @endif
+
+                        </span>
+                    </div>
+
+
+                    <div class="despesa-mobile-linha">
+                        <span class="despesa-mobile-label">
+                            Situação
+                        </span>
+
+                        <span class="despesa-mobile-conteudo">
+
+                            @if($item['situacao'] === 'paga')
+
+                                <span class="status status-paga">
+                                    Paga
+                                </span>
+
+                            @elseif($item['situacao'] === 'cancelada')
+
+                                <span class="status status-cancelada">
+                                    Cancelada
+                                </span>
+
+                            @elseif($atrasada)
+
+                                <span class="status status-atrasada">
+                                    Atrasada
+                                </span>
+
+                            @else
+
+                                <span class="status status-pendente">
+                                    Pendente
+                                </span>
+
+                            @endif
+
+                        </span>
+                    </div>
+
+                </div>
+
+
+                @if($item['situacao'] === 'pendente')
+
+                    <div class="despesa-mobile-acoes">
+
+                        @if(!$ehParcela)
+
+                            <a
+                                href="{{ route(
+                                    'despesas.edit',
+                                    $model
+                                ) }}"
+                                class="btn-acao"
+                            >
+                                Editar
+                            </a>
+
+
+                            <button
+                                type="button"
+                                class="btn-acao btn-pagar"
+                                onclick="
+                                    document
+                                        .getElementById(
+                                            'pagar-despesa-{{ $model->id }}'
+                                        )
+                                        .showModal()
+                                "
+                            >
+                                Pagar
+                            </button>
+
+
+                            <form
+                                method="POST"
+                                action="{{ route(
+                                    'despesas.cancelar',
+                                    $model
+                                ) }}"
+                                style="margin:0;"
+                                onsubmit="
+                                    return confirm(
+                                        'Deseja cancelar esta despesa?'
+                                    );
+                                "
+                            >
+                                @csrf
+
+                                <button
+                                    type="submit"
+                                    class="
+                                        btn-acao
+                                        btn-cancelar-despesa
+                                    "
+                                >
+                                    Cancelar
+                                </button>
+
+                            </form>
+
+                        @else
+
+                            <button
+                                type="button"
+                                class="btn-acao btn-pagar"
+                                onclick="
+                                    document
+                                        .getElementById(
+                                            'pagar-parcela-{{ $model->id }}'
+                                        )
+                                        .showModal()
+                                "
+                            >
+                                Pagar
+                            </button>
+
+
+                            <form
+                                method="POST"
+                                action="{{ route(
+                                    'parcelas.cancelar',
+                                    $model
+                                ) }}"
+                                style="margin:0;"
+                                onsubmit="
+                                    return confirm(
+                                        'Deseja cancelar somente esta parcela?'
+                                    );
+                                "
+                            >
+                                @csrf
+
+                                <button
+                                    type="submit"
+                                    class="
+                                        btn-acao
+                                        btn-cancelar-despesa
+                                    "
+                                >
+                                    Cancelar
+                                </button>
+
+                            </form>
+
+                        @endif
+
+                    </div>
+
+                @endif
+
+            </div>
+
+        @empty
+
+            <div class="empty">
+                Nenhuma despesa cadastrada.
+            </div>
+
+        @endforelse
+
+    </div>
 
 </div>
 

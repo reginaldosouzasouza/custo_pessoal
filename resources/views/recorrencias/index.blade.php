@@ -153,6 +153,111 @@
         padding:50px 20px;
         color:#6b7280;
     }
+
+    .recorrencias-mobile-list {
+        display:none;
+    }
+
+    .recorrencia-mobile-card {
+        border:1px solid #e5e7eb;
+        border-radius:12px;
+        padding:14px;
+        background:#fff;
+    }
+
+    .recorrencia-mobile-card + .recorrencia-mobile-card {
+        margin-top:12px;
+    }
+
+    .recorrencia-mobile-top {
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+        gap:12px;
+        margin-bottom:10px;
+    }
+
+    .recorrencia-mobile-descricao {
+        min-width:0;
+        flex:1;
+        color:#111827;
+        font-size:13px;
+        font-weight:700;
+        line-height:1.35;
+        word-break:break-word;
+    }
+
+    .recorrencia-mobile-descricao small {
+        display:block;
+        margin-top:3px;
+        color:#6b7280;
+        font-size:10px;
+        font-weight:400;
+    }
+
+    .recorrencia-mobile-valor {
+        font-size:14px;
+        font-weight:700;
+        white-space:nowrap;
+        text-align:right;
+    }
+
+    .recorrencia-mobile-dados {
+        display:grid;
+        grid-template-columns:1fr;
+        gap:7px;
+        margin-top:8px;
+    }
+
+    .recorrencia-mobile-linha {
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:14px;
+        padding-top:7px;
+        border-top:1px solid #f1f5f9;
+        font-size:11px;
+    }
+
+    .recorrencia-mobile-label {
+        color:#6b7280;
+        font-weight:600;
+        flex-shrink:0;
+    }
+
+    .recorrencia-mobile-conteudo {
+        color:#374151;
+        text-align:right;
+        min-width:0;
+        word-break:break-word;
+    }
+
+    .recorrencia-mobile-acoes {
+        display:flex;
+        flex-wrap:wrap;
+        gap:8px;
+        margin-top:12px;
+        padding-top:10px;
+        border-top:1px solid #e5e7eb;
+    }
+
+    .recorrencia-mobile-acoes .btn-acao,
+    .recorrencia-mobile-acoes form {
+        flex:1 1 0;
+    }
+
+    .recorrencia-mobile-acoes .btn-acao {
+        width:100%;
+        min-height:36px;
+    }
+
+    @media(max-width:650px) {
+        .btn-novo { width:100%; }
+        .table-card { padding:12px; overflow-x:visible; }
+        .recorrencias-table { display:none; }
+        .recorrencias-mobile-list { display:block; }
+        .page-header > .cp-card { width:100%; }
+    }
 </style>
 @endpush
 
@@ -413,6 +518,221 @@
             </tbody>
 
         </table>
+
+        <div class="recorrencias-mobile-list">
+
+            @foreach($recorrencias as $recorrencia)
+
+                <div class="recorrencia-mobile-card">
+
+                    <div class="recorrencia-mobile-top">
+
+                        <div class="recorrencia-mobile-descricao">
+
+                            {{ $recorrencia->descricao }}
+
+                            @if($recorrencia->tipo_valor === 'variavel')
+                                <small>
+                                    Valor variável
+                                </small>
+                            @endif
+
+                        </div>
+
+                        <div class="
+                            recorrencia-mobile-valor
+                            {{ $recorrencia->tipo === 'receita'
+                                ? 'valor-receita'
+                                : 'valor-despesa' }}
+                        ">
+
+                            @if($recorrencia->valor_padrao !== null)
+
+                                R$
+                                {{ number_format(
+                                    $recorrencia->valor_padrao,
+                                    2,
+                                    ',',
+                                    '.'
+                                ) }}
+
+                            @else
+                                -
+                            @endif
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="recorrencia-mobile-dados">
+
+                        <div class="recorrencia-mobile-linha">
+                            <span class="recorrencia-mobile-label">
+                                Tipo
+                            </span>
+
+                            <span class="recorrencia-mobile-conteudo">
+
+                                <span class="
+                                    badge
+                                    {{ $recorrencia->tipo === 'receita'
+                                        ? 'badge-receita'
+                                        : 'badge-despesa' }}
+                                ">
+                                    {{ $recorrencia->tipo === 'receita'
+                                        ? 'Receita'
+                                        : 'Despesa' }}
+                                </span>
+
+                            </span>
+                        </div>
+
+
+                        <div class="recorrencia-mobile-linha">
+                            <span class="recorrencia-mobile-label">
+                                Categoria
+                            </span>
+
+                            <span class="recorrencia-mobile-conteudo">
+                                {{ $recorrencia->categoria?->icone }}
+                                {{ $recorrencia->categoria?->nome ?? '-' }}
+                            </span>
+                        </div>
+
+
+                        <div class="recorrencia-mobile-linha">
+                            <span class="recorrencia-mobile-label">
+                                Frequência
+                            </span>
+
+                            <span class="recorrencia-mobile-conteudo">
+                                {{ ucfirst($recorrencia->frequencia) }}
+                            </span>
+                        </div>
+
+
+                        <div class="recorrencia-mobile-linha">
+                            <span class="recorrencia-mobile-label">
+                                Vencimento
+                            </span>
+
+                            <span class="recorrencia-mobile-conteudo">
+                                @if($recorrencia->dia_vencimento)
+                                    Dia {{ $recorrencia->dia_vencimento }}
+                                @else
+                                    -
+                                @endif
+                            </span>
+                        </div>
+
+
+                        <div class="recorrencia-mobile-linha">
+                            <span class="recorrencia-mobile-label">
+                                Conta padrão
+                            </span>
+
+                            <span class="recorrencia-mobile-conteudo">
+                                {{ $recorrencia->contaPadrao?->nome ?? '-' }}
+                            </span>
+                        </div>
+
+
+                        <div class="recorrencia-mobile-linha">
+                            <span class="recorrencia-mobile-label">
+                                Classificação
+                            </span>
+
+                            <span class="recorrencia-mobile-conteudo">
+
+                                @if($recorrencia->tipo === 'despesa')
+
+                                    <span class="
+                                        badge
+                                        {{ $recorrencia->essencial
+                                            ? 'badge-essencial'
+                                            : 'badge-nao-essencial' }}
+                                    ">
+                                        {{ $recorrencia->essencial
+                                            ? 'Essencial'
+                                            : 'Não essencial' }}
+                                    </span>
+
+                                @else
+                                    -
+                                @endif
+
+                            </span>
+                        </div>
+
+
+                        <div class="recorrencia-mobile-linha">
+                            <span class="recorrencia-mobile-label">
+                                Situação
+                            </span>
+
+                            <span class="recorrencia-mobile-conteudo">
+
+                                <span class="
+                                    badge
+                                    {{ $recorrencia->ativa
+                                        ? 'badge-ativo'
+                                        : 'badge-inativo' }}
+                                ">
+                                    {{ $recorrencia->ativa
+                                        ? 'Ativa'
+                                        : 'Inativa' }}
+                                </span>
+
+                            </span>
+                        </div>
+
+                    </div>
+
+
+                    <div class="recorrencia-mobile-acoes">
+
+                        <a
+                            href="{{ route(
+                                'recorrencias.edit',
+                                $recorrencia
+                            ) }}"
+                            class="btn-acao"
+                        >
+                            Editar
+                        </a>
+
+
+                        <form
+                            method="POST"
+                            action="{{ route(
+                                'recorrencias.status',
+                                $recorrencia
+                            ) }}"
+                            style="margin:0;"
+                        >
+                            @csrf
+                            @method('PATCH')
+
+                            <button
+                                type="submit"
+                                class="btn-acao btn-status"
+                            >
+                                {{ $recorrencia->ativa
+                                    ? 'Desativar'
+                                    : 'Ativar' }}
+                            </button>
+
+                        </form>
+
+                    </div>
+
+                </div>
+
+            @endforeach
+
+        </div>
+
 
     @else
 

@@ -265,6 +265,153 @@
         margin-top:3px;
     }
 
+
+    .faturas-mobile-list {
+        display:none;
+    }
+
+    .fatura-mobile-card {
+        border:1px solid #e5e7eb;
+        border-radius:12px;
+        padding:14px;
+        background:#fff;
+    }
+
+    .fatura-mobile-card + .fatura-mobile-card {
+        margin-top:12px;
+    }
+
+    .fatura-mobile-top {
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+        gap:12px;
+        margin-bottom:10px;
+    }
+
+    .fatura-mobile-cartao {
+        min-width:0;
+        flex:1;
+        color:#111827;
+        font-size:13px;
+        font-weight:700;
+        line-height:1.35;
+        word-break:break-word;
+    }
+
+    .fatura-mobile-valor {
+        color:#7653cb;
+        font-size:14px;
+        font-weight:700;
+        white-space:nowrap;
+        text-align:right;
+    }
+
+    .fatura-mobile-dados {
+        display:grid;
+        grid-template-columns:1fr;
+        gap:7px;
+        margin-top:8px;
+    }
+
+    .fatura-mobile-linha {
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:14px;
+        padding-top:7px;
+        border-top:1px solid #f1f5f9;
+        font-size:11px;
+    }
+
+    .fatura-mobile-label {
+        color:#6b7280;
+        font-weight:600;
+        flex-shrink:0;
+    }
+
+    .fatura-mobile-conteudo {
+        color:#374151;
+        text-align:right;
+        min-width:0;
+        word-break:break-word;
+    }
+
+    .fatura-mobile-acoes {
+        display:flex;
+        flex-wrap:wrap;
+        gap:8px;
+        margin-top:12px;
+        padding-top:10px;
+        border-top:1px solid #e5e7eb;
+    }
+
+    .fatura-mobile-acoes .btn-detalhes,
+    .fatura-mobile-acoes .btn-pagar {
+        flex:1 1 0;
+        min-height:36px;
+    }
+
+    .parcelas-mobile-list {
+        display:none;
+    }
+
+    .parcela-mobile-card {
+        border:1px solid #e5e7eb;
+        border-radius:10px;
+        padding:11px;
+        background:#fff;
+    }
+
+    .parcela-mobile-card + .parcela-mobile-card {
+        margin-top:9px;
+    }
+
+    .parcela-mobile-top {
+        display:flex;
+        justify-content:space-between;
+        gap:10px;
+        align-items:flex-start;
+        margin-bottom:8px;
+    }
+
+    .parcela-mobile-compra {
+        min-width:0;
+        flex:1;
+        color:#111827;
+        font-size:11px;
+        font-weight:700;
+        word-break:break-word;
+    }
+
+    .parcela-mobile-valor {
+        color:#7653cb;
+        font-size:12px;
+        font-weight:700;
+        white-space:nowrap;
+    }
+
+    .parcela-mobile-linha {
+        display:flex;
+        justify-content:space-between;
+        gap:12px;
+        padding-top:6px;
+        border-top:1px solid #f1f5f9;
+        font-size:10px;
+    }
+
+    .parcela-mobile-label {
+        color:#6b7280;
+        font-weight:600;
+    }
+
+    .parcela-mobile-conteudo {
+        text-align:right;
+        color:#374151;
+        min-width:0;
+        word-break:break-word;
+    }
+
     @media(max-width:900px) {
         .filtros-grid {
             grid-template-columns:1fr 1fr;
@@ -283,6 +430,43 @@
         .btn-filtrar,
         .btn-limpar {
             flex:1;
+        }
+
+        .btn-voltar {
+            width:100%;
+        }
+
+        .table-card {
+            padding:12px;
+            overflow-x:visible;
+        }
+
+        .faturas-table {
+            display:none;
+        }
+
+        .faturas-mobile-list {
+            display:block;
+        }
+
+        dialog {
+            width:calc(100% - 20px);
+        }
+
+        .dialog-content {
+            padding:16px;
+        }
+
+        .parcelas-table {
+            display:none;
+        }
+
+        .parcelas-mobile-list {
+            display:block;
+        }
+
+        .dialog-subtitle {
+            line-height:1.5;
         }
     }
 </style>
@@ -675,6 +859,182 @@
 
         </table>
 
+        <div class="faturas-mobile-list">
+
+            @foreach($faturas as $fatura)
+
+                @php
+                    $hoje = \Carbon\Carbon::today();
+
+                    $vencida =
+                        $fatura->situacao !== 'paga'
+                        && $fatura->data_vencimento
+                        && $fatura->data_vencimento->lt($hoje);
+
+                    $valorRestante = max(
+                        0,
+                        (float) $fatura->valor_total
+                        - (float) $fatura->valor_pago
+                    );
+
+                    $classeStatus =
+                        $fatura->situacao === 'paga'
+                            ? 'status-paga'
+                            : (
+                                $vencida
+                                    ? 'status-vencida'
+                                    : (
+                                        $fatura->situacao === 'fechada'
+                                            ? 'status-fechada'
+                                            : 'status-aberta'
+                                    )
+                            );
+
+                    $textoStatus =
+                        $fatura->situacao === 'paga'
+                            ? 'Paga'
+                            : (
+                                $vencida
+                                    ? 'Vencida'
+                                    : ucfirst($fatura->situacao)
+                            );
+                @endphp
+
+                <div class="fatura-mobile-card">
+
+                    <div class="fatura-mobile-top">
+
+                        <div class="fatura-mobile-cartao">
+                            {{ $fatura->cartao?->nome ?? 'Cartão' }}
+                        </div>
+
+                        <div class="fatura-mobile-valor">
+                            R$
+                            {{ number_format(
+                                $fatura->valor_total,
+                                2,
+                                ',',
+                                '.'
+                            ) }}
+                        </div>
+
+                    </div>
+
+
+                    <div class="fatura-mobile-dados">
+
+                        <div class="fatura-mobile-linha">
+                            <span class="fatura-mobile-label">
+                                Competência
+                            </span>
+
+                            <span class="fatura-mobile-conteudo">
+                                {{ \Carbon\Carbon::createFromFormat(
+                                    'Y-m',
+                                    $fatura->competencia
+                                )->format('m/Y') }}
+                            </span>
+                        </div>
+
+
+                        <div class="fatura-mobile-linha">
+                            <span class="fatura-mobile-label">
+                                Vencimento
+                            </span>
+
+                            <span class="fatura-mobile-conteudo">
+                                {{ $fatura->data_vencimento
+                                    ? $fatura->data_vencimento->format('d/m/Y')
+                                    : '-' }}
+                            </span>
+                        </div>
+
+
+                        <div class="fatura-mobile-linha">
+                            <span class="fatura-mobile-label">
+                                Restante
+                            </span>
+
+                            <span class="fatura-mobile-conteudo">
+                                R$
+                                {{ number_format(
+                                    $valorRestante,
+                                    2,
+                                    ',',
+                                    '.'
+                                ) }}
+
+                                @if($fatura->situacao === 'paga')
+                                    <div class="pagamento-info">
+                                        Pago em
+                                        {{ $fatura->data_pagamento
+                                            ? $fatura->data_pagamento->format('d/m/Y')
+                                            : '-' }}
+                                    </div>
+                                @endif
+                            </span>
+                        </div>
+
+
+                        <div class="fatura-mobile-linha">
+                            <span class="fatura-mobile-label">
+                                Situação
+                            </span>
+
+                            <span class="fatura-mobile-conteudo">
+                                <span class="status {{ $classeStatus }}">
+                                    {{ $textoStatus }}
+                                </span>
+                            </span>
+                        </div>
+
+                    </div>
+
+
+                    <div class="fatura-mobile-acoes">
+
+                        <button
+                            type="button"
+                            class="btn-detalhes"
+                            onclick="
+                                document
+                                    .getElementById(
+                                        'detalhesFatura{{ $fatura->id }}'
+                                    )
+                                    .showModal()
+                            "
+                        >
+                            Ver detalhes
+                        </button>
+
+
+                        @if($fatura->situacao !== 'paga')
+
+                            <button
+                                type="button"
+                                class="btn-pagar"
+                                onclick="
+                                    document
+                                        .getElementById(
+                                            'pagamentoFatura{{ $fatura->id }}'
+                                        )
+                                        .showModal()
+                                "
+                            >
+                                Pagar
+                            </button>
+
+                        @endif
+
+                    </div>
+
+                </div>
+
+            @endforeach
+
+        </div>
+
+
 
         {{-- =========================================================
              MODAIS FORA DA TABELA
@@ -774,6 +1134,77 @@
                                 </tbody>
 
                             </table>
+
+                            <div class="parcelas-mobile-list">
+
+                                @forelse($fatura->parcelas as $parcela)
+
+                                    <div class="parcela-mobile-card">
+
+                                        <div class="parcela-mobile-top">
+
+                                            <div class="parcela-mobile-compra">
+                                                {{ $parcela
+                                                    ->compra
+                                                    ?->descricao
+                                                    ?? 'Compra' }}
+                                            </div>
+
+                                            <div class="parcela-mobile-valor">
+                                                R$
+                                                {{ number_format(
+                                                    $parcela->valor,
+                                                    2,
+                                                    ',',
+                                                    '.'
+                                                ) }}
+                                            </div>
+
+                                        </div>
+
+
+                                        <div class="parcela-mobile-linha">
+
+                                            <span class="parcela-mobile-label">
+                                                Parcela
+                                            </span>
+
+                                            <span class="parcela-mobile-conteudo">
+                                                {{ $parcela->numero_parcela }}
+                                                /
+                                                {{ $parcela->total_parcelas }}
+                                            </span>
+
+                                        </div>
+
+
+                                        <div class="parcela-mobile-linha">
+
+                                            <span class="parcela-mobile-label">
+                                                Categoria
+                                            </span>
+
+                                            <span class="parcela-mobile-conteudo">
+                                                {{ $parcela
+                                                    ->compra
+                                                    ?->categoria
+                                                    ?->nome
+                                                    ?? '-' }}
+                                            </span>
+
+                                        </div>
+
+                                    </div>
+
+                                @empty
+
+                                    <div class="empty-state">
+                                        Nenhuma parcela vinculada.
+                                    </div>
+
+                                @endforelse
+
+                            </div>
 
 
                             <div class="dialog-actions">

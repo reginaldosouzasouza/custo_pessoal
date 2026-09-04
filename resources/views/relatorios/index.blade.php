@@ -4,8 +4,13 @@
 
 @push('styles')
 <style>
-    .page-header {
+   .page-header {
         margin-bottom: 22px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 15px;
+        flex-wrap: wrap;
     }
 
     .filtros-card {
@@ -261,6 +266,94 @@
         min-height: 260px;
     }
 
+    .btn-relatorio-despesas {
+        min-height: 40px;
+        border-radius: 8px;
+        padding: 0 14px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #0d6efd;
+        color: #fff;
+        text-decoration: none;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .btn-relatorio-despesas:hover {
+        color: #fff;
+        opacity: .9;
+    }
+
+
+    .mov-mobile-list {
+        display: none;
+    }
+
+    .mov-mobile-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 12px;
+        background: #fff;
+    }
+
+    .mov-mobile-card + .mov-mobile-card {
+        margin-top: 10px;
+    }
+
+    .mov-mobile-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 10px;
+        margin-bottom: 8px;
+    }
+
+    .mov-mobile-descricao {
+        min-width: 0;
+        flex: 1;
+        color: #111827;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.35;
+        word-break: break-word;
+    }
+
+    .mov-mobile-valor {
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+        text-align: right;
+    }
+
+    .mov-mobile-dados {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+
+    .mov-mobile-linha {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding-top: 6px;
+        border-top: 1px solid #f1f5f9;
+        font-size: 10px;
+    }
+
+    .mov-mobile-label {
+        color: #6b7280;
+        font-weight: 600;
+        flex-shrink: 0;
+    }
+
+    .mov-mobile-conteudo {
+        color: #374151;
+        text-align: right;
+        min-width: 0;
+        word-break: break-word;
+    }
+
     @media(max-width: 1000px) {
         .analise-grid {
             grid-template-columns: 1fr;
@@ -274,7 +367,12 @@
         }
 
         .resumo-grid {
-            grid-template-columns: 1fr;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .resumo-grid .resumo-card:nth-child(3) {
+            grid-column: 1 / -1;
         }
     }
 
@@ -291,6 +389,88 @@
         .btn-limpar {
             flex: 1;
         }
+
+        .resumo-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .resumo-grid .resumo-card:nth-child(3) {
+            grid-column: 1 / -1;
+        }
+
+        .resumo-card {
+            padding: 14px;
+        }
+
+        .resumo-label {
+            font-size: 10px;
+            margin-bottom: 4px;
+        }
+
+        .resumo-valor {
+            font-size: 19px;
+            line-height: 1.2;
+        }
+
+        .analise-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .analise-grid .grafico-card {
+            grid-column: 1 / -1;
+        }
+
+        .classificacao-card {
+            padding: 14px;
+        }
+
+        .classificacao-label {
+            font-size: 10px;
+            margin-bottom: 4px;
+        }
+
+        .classificacao-valor {
+            font-size: 18px;
+        }
+
+        .classificacao-percentual {
+            font-size: 10px;
+        }
+
+        .grafico-card {
+            padding: 14px;
+        }
+
+        .grafico-area {
+            min-height: 220px;
+        }
+
+        .table-card {
+            padding: 12px;
+            overflow-x: visible;
+        }
+
+        .mov-table {
+            display: none;
+        }
+
+        .mov-mobile-list {
+            display: block;
+        }
+    }
+
+    @media(max-width: 390px) {
+        .resumo-grid,
+        .analise-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .resumo-grid .resumo-card:nth-child(3),
+        .analise-grid .grafico-card {
+            grid-column: auto;
+        }
     }
 </style>
 @endpush
@@ -300,13 +480,24 @@
 
 <div class="page-header">
 
-    <h1 class="cp-page-title">
-        Relatórios
-    </h1>
+    <div>
 
-    <p class="cp-page-subtitle">
-        Analise suas receitas, despesas e movimentações por período.
-    </p>
+        <h1 class="cp-page-title">
+            Relatórios
+        </h1>
+
+        <p class="cp-page-subtitle">
+            Analise suas receitas, despesas e movimentações por período.
+        </p>
+
+    </div>
+
+    <a
+        href="{{ route('relatorios.despesas') }}"
+        class="btn-relatorio-despesas"
+    >
+        Relatório de Despesas
+    </a>
 
 </div>
 
@@ -697,6 +888,95 @@
             </tbody>
 
         </table>
+
+        <div class="mov-mobile-list">
+
+            @foreach($movimentacoes as $movimentacao)
+
+                @php
+                    $entrada =
+                        $movimentacao->tipo
+                        === 'entrada';
+                @endphp
+
+                <div class="mov-mobile-card">
+
+                    <div class="mov-mobile-top">
+
+                        <div class="mov-mobile-descricao">
+                            {{ $movimentacao->descricao }}
+                        </div>
+
+                        <div class="
+                            mov-mobile-valor
+                            {{ $entrada
+                                ? 'mov-entrada'
+                                : 'mov-saida' }}
+                        ">
+                            {{ $entrada ? '+' : '-' }}
+                            R$
+                            {{ number_format(
+                                $movimentacao->valor,
+                                2,
+                                ',',
+                                '.'
+                            ) }}
+                        </div>
+
+                    </div>
+
+                    <div class="mov-mobile-dados">
+
+                        <div class="mov-mobile-linha">
+                            <span class="mov-mobile-label">
+                                Data
+                            </span>
+
+                            <span class="mov-mobile-conteudo">
+                                {{ $movimentacao
+                                    ->data_movimentacao
+                                    ->format('d/m/Y') }}
+                            </span>
+                        </div>
+
+                        <div class="mov-mobile-linha">
+                            <span class="mov-mobile-label">
+                                Conta
+                            </span>
+
+                            <span class="mov-mobile-conteudo">
+                                {{ $movimentacao
+                                    ->conta
+                                    ?->nome
+                                    ?? '-' }}
+                            </span>
+                        </div>
+
+                        <div class="mov-mobile-linha">
+                            <span class="mov-mobile-label">
+                                Origem
+                            </span>
+
+                            <span class="mov-mobile-conteudo">
+                                {{ ucfirst(
+                                    str_replace(
+                                        '_',
+                                        ' ',
+                                        $movimentacao
+                                            ->origem_tipo
+                                    )
+                                ) }}
+                            </span>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            @endforeach
+
+        </div>
+
 
     @else
 

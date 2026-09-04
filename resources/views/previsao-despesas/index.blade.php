@@ -218,6 +218,78 @@
         color:#6b7280;
     }
 
+
+    .previsao-mobile-list {
+        display: none;
+    }
+
+    .previsao-mobile-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 14px;
+        background: #fff;
+    }
+
+    .previsao-mobile-card + .previsao-mobile-card {
+        margin-top: 12px;
+    }
+
+    .previsao-mobile-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 10px;
+    }
+
+    .previsao-mobile-descricao {
+        min-width: 0;
+        flex: 1;
+        color: #111827;
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.35;
+        word-break: break-word;
+    }
+
+    .previsao-mobile-valor {
+        color: #7653cb;
+        font-size: 14px;
+        font-weight: 700;
+        white-space: nowrap;
+        text-align: right;
+    }
+
+    .previsao-mobile-dados {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 7px;
+        margin-top: 8px;
+    }
+
+    .previsao-mobile-linha {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 14px;
+        padding-top: 7px;
+        border-top: 1px solid #f1f5f9;
+        font-size: 11px;
+    }
+
+    .previsao-mobile-label {
+        color: #6b7280;
+        font-weight: 600;
+        flex-shrink: 0;
+    }
+
+    .previsao-mobile-conteudo {
+        color: #374151;
+        text-align: right;
+        min-width: 0;
+        word-break: break-word;
+    }
+
     @media(max-width:1050px) {
         .cards-resumo {
             grid-template-columns:repeat(2, 1fr);
@@ -241,6 +313,24 @@
 
         .cards-resumo {
             grid-template-columns:1fr;
+        }
+
+        .table-card {
+            padding:12px;
+            overflow-x:visible;
+        }
+
+        .previsao-table {
+            width:100%;
+            min-width:0;
+        }
+
+        .previsao-table {
+            display:none;
+        }
+
+        .previsao-mobile-list {
+            display:block;
         }
     }
 </style>
@@ -613,6 +703,190 @@
             </tbody>
 
         </table>
+
+        <div class="previsao-mobile-list">
+
+            @foreach($itens as $item)
+
+                @php
+
+                    $classeOrigem = match(
+                        $item['tipo']
+                    ) {
+                        'cartao' =>
+                            'origem-cartao',
+
+                        'recorrente' =>
+                            'origem-recorrente',
+
+                        'parcela' =>
+                            'origem-parcela',
+
+                        default =>
+                            'origem-despesa',
+                    };
+
+
+                    $situacao = strtolower(
+                        $item['situacao']
+                        ?? 'prevista'
+                    );
+
+
+                    $classeSituacao = match(
+                        $situacao
+                    ) {
+                        'paga' =>
+                            'status-paga',
+
+                        'aberta' =>
+                            'status-aberta',
+
+                        'fechada' =>
+                            'status-fechada',
+
+                        'vencida' =>
+                            'status-vencida',
+
+                        'pendente' =>
+                            'status-pendente',
+
+                        default =>
+                            'status-prevista',
+                    };
+
+
+                    $textoSituacao = match(
+                        $situacao
+                    ) {
+                        'paga' =>
+                            'Paga',
+
+                        'aberta' =>
+                            'Aberta',
+
+                        'fechada' =>
+                            'Fechada',
+
+                        'vencida' =>
+                            'Vencida',
+
+                        'pendente' =>
+                            'Pendente',
+
+                        default =>
+                            'Prevista',
+                    };
+
+
+                    $vencimento =
+                        !empty(
+                            $item['vencimento']
+                        )
+                            ? \Carbon\Carbon::parse(
+                                $item['vencimento']
+                            )->format('d/m/Y')
+                            : '-';
+
+                @endphp
+
+
+                <div class="previsao-mobile-card">
+
+                    <div class="previsao-mobile-top">
+
+                        <div class="previsao-mobile-descricao">
+                            {{ $item['descricao'] }}
+                        </div>
+
+                        <div class="previsao-mobile-valor">
+
+                            @if(
+                                ($item['tipo'] ?? null)
+                                    === 'recorrente'
+                                &&
+                                ($item['tipo_valor'] ?? null)
+                                    === 'variavel'
+                                &&
+                                (float) $item['valor'] <= 0
+                            )
+
+                                Valor a informar
+
+                            @else
+
+                                R$
+                                {{ number_format(
+                                    $item['valor'],
+                                    2,
+                                    ',',
+                                    '.'
+                                ) }}
+
+                            @endif
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="previsao-mobile-dados">
+
+                        <div class="previsao-mobile-linha">
+                            <span class="previsao-mobile-label">
+                                Categoria
+                            </span>
+
+                            <span class="previsao-mobile-conteudo">
+                                {{ $item['categoria'] ?? '-' }}
+                            </span>
+                        </div>
+
+
+                        <div class="previsao-mobile-linha">
+                            <span class="previsao-mobile-label">
+                                Origem
+                            </span>
+
+                            <span class="previsao-mobile-conteudo">
+                                <span class="origem {{ $classeOrigem }}">
+                                    {{ $item['origem'] }}
+                                </span>
+                            </span>
+                        </div>
+
+
+                        <div class="previsao-mobile-linha">
+                            <span class="previsao-mobile-label">
+                                Vencimento
+                            </span>
+
+                            <span class="previsao-mobile-conteudo">
+                                {{ $vencimento }}
+                            </span>
+                        </div>
+
+
+                        <div class="previsao-mobile-linha">
+                            <span class="previsao-mobile-label">
+                                Situação
+                            </span>
+
+                            <span class="previsao-mobile-conteudo">
+                                <span class="status {{ $classeSituacao }}">
+                                    {{ $textoSituacao }}
+                                </span>
+                            </span>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            @endforeach
+
+        </div>
+
 
     @else
 

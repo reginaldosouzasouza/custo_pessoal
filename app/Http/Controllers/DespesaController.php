@@ -372,43 +372,92 @@ class DespesaController extends Controller
         |--------------------------------------------------------------------------
         | ORDENA
         |--------------------------------------------------------------------------
+        |
+        | Regra da tela:
+        | 1. Pendentes sempre aparecem primeiro.
+        | 2. Dentro dos pendentes, vencimento mais próximo primeiro.
+        |    Exemplo: 05/09, 08/09, 10/09.
+        | 3. Para os demais itens, mantém a ordenação cronológica
+        |    usando vencimento ou pagamento conforme o filtro.
+        |
         */
 
-        if (
-            $filtrarPor
-            === 'pagamento'
-        ) {
+        $lancamentos =
+            $lancamentos
+                ->sort(
+                    function ($a, $b) use ($filtrarPor) {
 
-            $lancamentos =
-                $lancamentos
-                    ->sortByDesc(
-                        function ($item) {
+                        $aPendente =
+                            $a['situacao'] === 'pendente';
 
-                            return
-                                $item['data_pagamento']
-                                ? $item['data_pagamento']
-                                    ->timestamp
-                                : 0;
+                        $bPendente =
+                            $b['situacao'] === 'pendente';
+
+
+                        /*
+                         * Pendentes sempre primeiro.
+                         */
+                        if ($aPendente !== $bPendente) {
+                            return $aPendente ? -1 : 1;
                         }
-                    )
-                    ->values();
 
-        } else {
 
-            $lancamentos =
-                $lancamentos
-                    ->sortByDesc(
-                        function ($item) {
+                        /*
+                         * Pendentes:
+                         * vencimento mais próximo primeiro.
+                         */
+                        if ($aPendente && $bPendente) {
 
-                            return
-                                $item['data_vencimento']
-                                ? $item['data_vencimento']
-                                    ->timestamp
-                                : 0;
+                            $dataA =
+                                $a['data_vencimento']
+                                    ? $a['data_vencimento']->timestamp
+                                    : PHP_INT_MAX;
+
+                            $dataB =
+                                $b['data_vencimento']
+                                    ? $b['data_vencimento']->timestamp
+                                    : PHP_INT_MAX;
+
+                            return $dataA <=> $dataB;
                         }
-                    )
-                    ->values();
-        }
+
+
+                        /*
+                         * Demais situações.
+                         */
+                        if ($filtrarPor === 'pagamento') {
+
+                            $dataA =
+                                $a['data_pagamento']
+                                    ? $a['data_pagamento']->timestamp
+                                    : 0;
+
+                            $dataB =
+                                $b['data_pagamento']
+                                    ? $b['data_pagamento']->timestamp
+                                    : 0;
+
+                        } else {
+
+                            $dataA =
+                                $a['data_vencimento']
+                                    ? $a['data_vencimento']->timestamp
+                                    : 0;
+
+                            $dataB =
+                                $b['data_vencimento']
+                                    ? $b['data_vencimento']->timestamp
+                                    : 0;
+                        }
+
+
+                        /*
+                         * Mais recentes primeiro para os não pendentes.
+                         */
+                        return $dataB <=> $dataA;
+                    }
+                )
+                ->values();
 
         $totalExibido = (float) $lancamentos->sum('valor');
 

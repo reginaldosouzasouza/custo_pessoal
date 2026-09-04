@@ -150,9 +150,126 @@
         color: #6b7280;
     }
 
+
+    .receitas-mobile-list {
+        display: none;
+    }
+
+    .receita-mobile-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 14px;
+        background: #fff;
+    }
+
+    .receita-mobile-card + .receita-mobile-card {
+        margin-top: 12px;
+    }
+
+    .receita-mobile-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 10px;
+    }
+
+    .receita-mobile-descricao {
+        min-width: 0;
+        flex: 1;
+        color: #111827;
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.35;
+        word-break: break-word;
+    }
+
+    .receita-mobile-valor {
+        color: #16a34a;
+        font-size: 14px;
+        font-weight: 700;
+        white-space: nowrap;
+        text-align: right;
+    }
+
+    .receita-mobile-dados {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 7px;
+        margin-top: 8px;
+    }
+
+    .receita-mobile-linha {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 14px;
+        padding-top: 7px;
+        border-top: 1px solid #f1f5f9;
+        font-size: 11px;
+    }
+
+    .receita-mobile-label {
+        color: #6b7280;
+        font-weight: 600;
+        flex-shrink: 0;
+    }
+
+    .receita-mobile-conteudo {
+        color: #374151;
+        text-align: right;
+        min-width: 0;
+        word-break: break-word;
+    }
+
+    .receita-mobile-acoes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+        padding-top: 10px;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .receita-mobile-acoes .btn-acao {
+        flex: 1 1 0;
+        min-height: 34px;
+    }
+
     @media(max-width: 650px) {
         .btn-novo {
             width: 100%;
+        }
+
+        .filtros {
+            display: grid;
+            grid-template-columns: 1fr;
+        }
+
+        .filtro-grupo,
+        .filtro-control,
+        .btn-filtrar {
+            width: 100%;
+            min-width: 0;
+        }
+
+        .receitas-card {
+            padding: 12px;
+            overflow-x: visible;
+        }
+
+        .receitas-table {
+            width: 100%;
+            min-width: 0;
+        }
+
+        .receitas-table thead,
+        .receitas-table tbody > tr {
+            display: none;
+        }
+
+        .receitas-mobile-list {
+            display: block;
         }
     }
 </style>
@@ -459,6 +576,143 @@
         </tbody>
 
     </table>
+
+    <div class="receitas-mobile-list">
+
+        @forelse($receitas as $receita)
+
+            @php
+                $atrasada =
+                    $receita->situacao === 'pendente'
+                    && $receita->data_prevista->isPast()
+                    && !$receita->data_prevista->isToday();
+            @endphp
+
+            <div class="receita-mobile-card">
+
+                <div class="receita-mobile-top">
+
+                    <div class="receita-mobile-descricao">
+                        {{ $receita->descricao }}
+                    </div>
+
+                    <div class="receita-mobile-valor">
+                        R$
+                        {{ number_format(
+                            $receita->valor,
+                            2,
+                            ',',
+                            '.'
+                        ) }}
+                    </div>
+
+                </div>
+
+                <div class="receita-mobile-dados">
+
+                    <div class="receita-mobile-linha">
+                        <span class="receita-mobile-label">Categoria</span>
+                        <span class="receita-mobile-conteudo">
+                            {{ $receita->categoria?->nome ?? '-' }}
+                        </span>
+                    </div>
+
+                    <div class="receita-mobile-linha">
+                        <span class="receita-mobile-label">Prevista</span>
+                        <span class="receita-mobile-conteudo">
+                            {{ $receita->data_prevista->format('d/m/Y') }}
+                        </span>
+                    </div>
+
+                    <div class="receita-mobile-linha">
+                        <span class="receita-mobile-label">Recebimento</span>
+                        <span class="receita-mobile-conteudo">
+                            {{ $receita->data_recebimento
+                                ? $receita->data_recebimento->format('d/m/Y')
+                                : '-' }}
+                        </span>
+                    </div>
+
+                    <div class="receita-mobile-linha">
+                        <span class="receita-mobile-label">Conta</span>
+                        <span class="receita-mobile-conteudo">
+                            {{ $receita->conta?->nome ?? '-' }}
+                        </span>
+                    </div>
+
+                    <div class="receita-mobile-linha">
+                        <span class="receita-mobile-label">Situação</span>
+                        <span class="receita-mobile-conteudo">
+
+                            @if($receita->situacao === 'recebida')
+
+                                <span class="status status-recebida">
+                                    Recebida
+                                </span>
+
+                            @elseif($atrasada)
+
+                                <span class="status status-atrasada">
+                                    Atrasada
+                                </span>
+
+                            @else
+
+                                <span class="status status-pendente">
+                                    Pendente
+                                </span>
+
+                            @endif
+
+                        </span>
+                    </div>
+
+                </div>
+
+                @if($receita->situacao === 'pendente')
+
+                    <div class="receita-mobile-acoes">
+
+                        <a
+                            href="{{ route(
+                                'receitas.edit',
+                                $receita
+                            ) }}"
+                            class="btn-acao"
+                        >
+                            Editar
+                        </a>
+
+                        <button
+                            type="button"
+                            class="btn-acao btn-receber"
+                            onclick="
+                                document
+                                .getElementById(
+                                    'receber-{{ $receita->id }}'
+                                )
+                                .showModal()
+                            "
+                        >
+                            Receber
+                        </button>
+
+                    </div>
+
+                @endif
+
+            </div>
+
+        @empty
+
+            <div class="empty">
+                Nenhuma receita cadastrada.
+            </div>
+
+        @endforelse
+
+    </div>
+
 
 </div>
 

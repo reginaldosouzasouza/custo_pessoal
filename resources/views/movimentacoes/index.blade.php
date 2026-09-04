@@ -198,6 +198,79 @@
         margin-top: 18px;
     }
 
+
+    .mov-mobile-list {
+        display: none;
+    }
+
+    .mov-mobile-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 14px;
+        background: #fff;
+    }
+
+    .mov-mobile-card + .mov-mobile-card {
+        margin-top: 12px;
+    }
+
+    .mov-mobile-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 10px;
+    }
+
+    .mov-mobile-descricao {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .mov-mobile-descricao strong {
+        display: block;
+        color: #111827;
+        font-size: 13px;
+        line-height: 1.35;
+        word-break: break-word;
+    }
+
+    .mov-mobile-valor {
+        font-size: 14px;
+        font-weight: 700;
+        white-space: nowrap;
+        text-align: right;
+    }
+
+    .mov-mobile-dados {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 7px;
+        font-size: 11px;
+        color: #4b5563;
+    }
+
+    .mov-mobile-linha {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        padding-top: 7px;
+        border-top: 1px solid #f1f5f9;
+    }
+
+    .mov-mobile-label {
+        color: #6b7280;
+        font-weight: 600;
+        flex-shrink: 0;
+    }
+
+    .mov-mobile-conteudo {
+        text-align: right;
+        color: #374151;
+        min-width: 0;
+        word-break: break-word;
+    }
+
     @media(max-width:900px) {
         .filtros-grid {
             grid-template-columns: 1fr 1fr;
@@ -213,6 +286,23 @@
         .btn-filtrar,
         .btn-limpar {
             width: 100%;
+        }
+
+        .table-card {
+            padding: 12px;
+            overflow-x: visible;
+        }
+
+        .mov-table {
+            display: none;
+        }
+
+        .mov-mobile-list {
+            display: block;
+        }
+
+        .pagination-wrap {
+            overflow-x: auto;
         }
     }
 </style>
@@ -562,6 +652,131 @@
             </tbody>
 
         </table>
+
+
+        <div class="mov-mobile-list">
+
+            @foreach(
+                $movimentacoes
+                as $movimentacao
+            )
+
+                @php
+                    $entrada =
+                        $movimentacao->tipo
+                        === 'entrada';
+                @endphp
+
+                <div class="mov-mobile-card">
+
+                    <div class="mov-mobile-top">
+
+                        <div class="mov-mobile-descricao">
+
+                            <strong>
+                                {{ $movimentacao->descricao }}
+                            </strong>
+
+                        </div>
+
+                        <div
+                            class="
+                                mov-mobile-valor
+                                {{ $entrada
+                                    ? 'valor-entrada'
+                                    : 'valor-saida' }}
+                            "
+                        >
+                            {{ $entrada ? '+' : '-' }}
+                            R$
+                            {{ number_format(
+                                $movimentacao->valor,
+                                2,
+                                ',',
+                                '.'
+                            ) }}
+                        </div>
+
+                    </div>
+
+
+                    <div class="mov-mobile-dados">
+
+                        <div class="mov-mobile-linha">
+                            <span class="mov-mobile-label">
+                                Data
+                            </span>
+
+                            <span class="mov-mobile-conteudo">
+                                {{ $movimentacao
+                                    ->data_movimentacao
+                                    ->format('d/m/Y') }}
+                            </span>
+                        </div>
+
+
+                        <div class="mov-mobile-linha">
+                            <span class="mov-mobile-label">
+                                Conta
+                            </span>
+
+                            <span class="mov-mobile-conteudo">
+                                {{ $movimentacao
+                                    ->conta
+                                    ?->nome
+                                    ?? '-' }}
+                            </span>
+                        </div>
+
+
+                        <div class="mov-mobile-linha">
+                            <span class="mov-mobile-label">
+                                Origem
+                            </span>
+
+                            <span class="mov-mobile-conteudo">
+                                {{ ucfirst(
+                                    str_replace(
+                                        '_',
+                                        ' ',
+                                        $movimentacao
+                                            ->origem_tipo
+                                    )
+                                ) }}
+                            </span>
+                        </div>
+
+
+                        <div class="mov-mobile-linha">
+                            <span class="mov-mobile-label">
+                                Tipo
+                            </span>
+
+                            <span class="mov-mobile-conteudo">
+
+                                <span
+                                    class="
+                                        tipo-badge
+                                        {{ $entrada
+                                            ? 'tipo-entrada'
+                                            : 'tipo-saida' }}
+                                    "
+                                >
+                                    {{ $entrada
+                                        ? 'Entrada'
+                                        : 'Saída' }}
+                                </span>
+
+                            </span>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            @endforeach
+
+        </div>
 
 
         <div class="pagination-wrap">
