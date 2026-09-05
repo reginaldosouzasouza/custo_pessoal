@@ -47,6 +47,32 @@ class DashboardController extends Controller
 
         /*
         |--------------------------------------------------------------------------
+        | RECEITAS PREVISTAS DO MÊS
+        |--------------------------------------------------------------------------
+        |
+        | Receitas que ainda não foram recebidas e cuja data prevista
+        | de recebimento pertence ao mês atual.
+        |
+        | Essas receitas NÃO entram no saldo atual enquanto continuarem
+        | pendentes.
+        |
+        */
+
+        $receitasPrevistasMes = Receita::query()
+            ->where('user_id', $userId)
+            ->where('situacao', 'pendente')
+            ->whereBetween(
+                'data_prevista',
+                [
+                    $inicioMes,
+                    $fimMes,
+                ]
+            )
+            ->sum('valor');
+
+
+        /*
+        |--------------------------------------------------------------------------
         | DESPESAS DO MÊS
         |--------------------------------------------------------------------------
         |
@@ -709,6 +735,26 @@ class DashboardController extends Controller
 
         /*
         |--------------------------------------------------------------------------
+        | SALDO PROJETADO DO MÊS
+        |--------------------------------------------------------------------------
+        |
+        | Visão futura, sem misturar com o saldo real disponível hoje.
+        |
+        | Fórmula:
+        | saldo atual
+        | + receitas ainda previstas para este mês
+        | - compromissos ainda previstos para este mês
+        |
+        */
+
+        $saldoProjetadoMes =
+            (float) $saldoAtual
+            + (float) $receitasPrevistasMes
+            - (float) $previsaoDespesasMes;
+
+
+        /*
+        |--------------------------------------------------------------------------
         | PREVISÃO A PAGAR
         |--------------------------------------------------------------------------
         |
@@ -1337,6 +1383,7 @@ class DashboardController extends Controller
             'dashboard',
             compact(
                 'receitasMes',
+                'receitasPrevistasMes',
                 'despesasMes',
                 'saldoAtual',
                 'aVencer',
@@ -1344,6 +1391,7 @@ class DashboardController extends Controller
                 'cartaoEmAberto',
                 'proximoMes',
                 'previsaoDespesasMes',
+                'saldoProjetadoMes',
                 'previsaoAPagar',
                 'categorias',
                 'graficoMeses',

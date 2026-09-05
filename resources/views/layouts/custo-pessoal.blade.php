@@ -278,7 +278,44 @@
             display: block;
             color: #ffffff;
             font-size: 13px;
-            margin-bottom: 2px;
+            margin-bottom: 4px;
+        }
+
+        .cp-assinatura-status {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            line-height: 1.35;
+        }
+
+        .cp-assinatura-detalhe {
+            display: block;
+            margin-top: 3px;
+            font-size: 11px;
+            line-height: 1.35;
+            color: rgba(255,255,255,.72);
+        }
+
+        .cp-assinatura-teste {
+            color: #7dd3fc;
+        }
+
+        .cp-assinatura-ativa {
+            color: #86efac;
+        }
+
+        .cp-assinatura-vencida,
+        .cp-assinatura-suspensa,
+        .cp-assinatura-cancelada {
+            color: #fca5a5;
+        }
+
+        .cp-assinatura-admin {
+            color: #fde68a;
+        }
+
+        .cp-assinatura-sem {
+            color: #cbd5e1;
         }
 
         /* =========================================================
@@ -737,7 +774,162 @@
 
             </a>
 
+            @if(auth()->user()?->is_admin)
+
+                <div
+                    style="
+                        margin:18px 12px 8px;
+                        padding-top:14px;
+                        border-top:1px solid rgba(255,255,255,.12);
+                        font-size:10px;
+                        font-weight:700;
+                        letter-spacing:.08em;
+                        text-transform:uppercase;
+                        color:rgba(255,255,255,.55);
+                    "
+                >
+                    Administração
+                </div>
+
+
+                <a
+                    href="{{ route('admin.assinaturas.index') }}"
+                    class="cp-menu-link
+                    {{ request()->routeIs('admin.assinaturas.*')
+                        ? 'active'
+                        : '' }}"
+                >
+                    <span class="cp-menu-icon">
+                        ◫
+                    </span>
+
+                    <span>
+                        Assinaturas
+                    </span>
+                </a>
+
+
+                <a
+                    href="{{ route('admin.planos.index') }}"
+                    class="cp-menu-link
+                    {{ request()->routeIs('admin.planos.*')
+                        ? 'active'
+                        : '' }}"
+                >
+                    <span class="cp-menu-icon">
+                        ▤
+                    </span>
+
+                    <span>
+                        Planos
+                    </span>
+                </a>
+
+            @endif
+
+
+
+
+
         </nav>
+
+
+        @php
+
+            $usuarioAssinatura =
+                auth()->user();
+
+            $assinaturaAtual =
+                $usuarioAssinatura
+                    ?->assinaturaAtual;
+
+            if ($assinaturaAtual) {
+                $assinaturaAtual
+                    ->loadMissing('plano');
+            }
+
+            $statusAssinatura =
+                $assinaturaAtual
+                    ?->situacao;
+
+            $vencimentoAssinatura =
+                $assinaturaAtual
+                    ?->data_vencimento;
+
+            /*
+             * Mesmo que a situação ainda esteja "teste" ou "ativa"
+             * no banco, visualmente consideramos vencida se a data
+             * de vencimento já passou.
+             */
+            if (
+                $assinaturaAtual
+                &&
+                in_array(
+                    $statusAssinatura,
+                    ['teste', 'ativa'],
+                    true
+                )
+                &&
+                $vencimentoAssinatura
+                &&
+                $vencimentoAssinatura
+                    ->lt(today())
+            ) {
+                $statusAssinatura =
+                    'vencida';
+            }
+
+            $diasRestantesAssinatura =
+                null;
+
+            if (
+                $vencimentoAssinatura
+                &&
+                !$vencimentoAssinatura
+                    ->lt(today())
+            ) {
+                $diasRestantesAssinatura =
+                    today()->diffInDays(
+                        $vencimentoAssinatura,
+                        false
+                    );
+            }
+
+            /*
+             * Duração ORIGINAL do teste.
+             *
+             * Exemplo:
+             * teste liberado por 60 dias -> continuará exibindo
+             * "Teste gratuito por 60 dias" durante o período normal.
+             *
+             * A contagem regressiva só será mostrada quando faltarem
+             * 5 dias ou menos para o vencimento.
+             */
+            $duracaoOriginalTeste =
+                null;
+
+            if (
+                $assinaturaAtual
+                &&
+                $statusAssinatura === 'teste'
+                &&
+                $assinaturaAtual->data_inicio
+                &&
+                $vencimentoAssinatura
+            ) {
+                $duracaoOriginalTeste =
+                    $assinaturaAtual
+                        ->data_inicio
+                        ->copy()
+                        ->startOfDay()
+                        ->diffInDays(
+                            $vencimentoAssinatura
+                                ->copy()
+                                ->startOfDay()
+                        );
+            }
+
+        @endphp
 
 
         <div class="cp-sidebar-footer">
@@ -746,9 +938,160 @@
                 Assinatura
             </strong>
 
-            <span>
-                Situação será exibida aqui
-            </span>
+
+            @if($usuarioAssinatura?->is_admin)
+
+                <span class="
+                    cp-assinatura-status
+                    cp-assinatura-admin
+                ">
+                    Administrador
+                </span>
+
+                <span class="cp-assinatura-detalhe">
+                    Acesso administrativo liberado
+                </span>
+
+
+            @elseif(!$assinaturaAtual)
+
+                <span class="
+                    cp-assinatura-status
+                    cp-assinatura-sem
+                ">
+                    Sem assinatura
+                </span>
+
+                <span class="cp-assinatura-detalhe">
+                    Aguardando liberação
+                </span>
+
+
+            @elseif($statusAssinatura === 'teste')
+
+                @if(
+                    $diasRestantesAssinatura !== null
+                    && $diasRestantesAssinatura <= 5
+                )
+
+                    <span class="
+                        cp-assinatura-status
+                        cp-assinatura-teste
+                    ">
+                        Teste gratuito
+                    </span>
+
+                    <span class="cp-assinatura-detalhe">
+
+                        @if($diasRestantesAssinatura === 0)
+
+                            Teste termina hoje
+
+                        @elseif($diasRestantesAssinatura === 1)
+
+                            1 dia restante
+
+                        @else
+
+                            {{ $diasRestantesAssinatura }}
+                            dias restantes
+
+                        @endif
+
+                    </span>
+
+                @else
+
+                    <span class="
+                        cp-assinatura-status
+                        cp-assinatura-teste
+                    ">
+                        Teste gratuito
+                        @if($duracaoOriginalTeste)
+                            por {{ $duracaoOriginalTeste }}
+                            {{ $duracaoOriginalTeste === 1 ? 'dia' : 'dias' }}
+                        @endif
+                    </span>
+
+                @endif
+
+
+            @elseif($statusAssinatura === 'ativa')
+
+                <span class="
+                    cp-assinatura-status
+                    cp-assinatura-ativa
+                ">
+                    {{ $assinaturaAtual
+                        ->plano
+                        ?->nome
+                        ?? 'Assinatura ativa' }}
+                </span>
+
+                <span class="cp-assinatura-detalhe">
+                    Vence em
+                    {{ $vencimentoAssinatura
+                        ?->format('d/m/Y') }}
+                </span>
+
+
+            @elseif($statusAssinatura === 'vencida')
+
+                <span class="
+                    cp-assinatura-status
+                    cp-assinatura-vencida
+                ">
+                    Vencida
+                </span>
+
+                <span class="cp-assinatura-detalhe">
+                    Venceu em
+                    {{ $vencimentoAssinatura
+                        ?->format('d/m/Y') }}
+                </span>
+
+
+            @elseif($statusAssinatura === 'suspensa')
+
+                <span class="
+                    cp-assinatura-status
+                    cp-assinatura-suspensa
+                ">
+                    Suspensa
+                </span>
+
+                <span class="cp-assinatura-detalhe">
+                    Acesso bloqueado
+                </span>
+
+
+            @elseif($statusAssinatura === 'cancelada')
+
+                <span class="
+                    cp-assinatura-status
+                    cp-assinatura-cancelada
+                ">
+                    Cancelada
+                </span>
+
+                <span class="cp-assinatura-detalhe">
+                    Acesso bloqueado
+                </span>
+
+
+            @else
+
+                <span class="
+                    cp-assinatura-status
+                    cp-assinatura-sem
+                ">
+                    {{ ucfirst(
+                        $statusAssinatura
+                        ?? 'Indefinida'
+                    ) }}
+                </span>
+
+            @endif
 
         </div>
 

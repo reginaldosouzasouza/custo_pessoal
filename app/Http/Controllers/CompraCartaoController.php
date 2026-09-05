@@ -171,6 +171,92 @@ class CompraCartaoController extends Controller
             $categoria->classificacao === 'essencial';
 
 
+        /*
+        |--------------------------------------------------------------------------
+        | BLOQUEIA COMPRA EM FATURA JÁ PAGA
+        |--------------------------------------------------------------------------
+        |
+        | Antes de criar a compra, verificamos TODAS as competências que
+        | serão atingidas pelas parcelas.
+        |
+        | Se qualquer uma delas já possuir uma fatura paga, o lançamento
+        | inteiro é bloqueado. Assim evitamos criar a compra parcialmente
+        | ou alterar uma fatura já encerrada.
+        |
+        */
+
+        $dataCompraValidacao = Carbon::parse(
+            $dados['data_compra']
+        );
+
+        $primeiraCompetenciaValidacao =
+            $dataCompraValidacao
+                ->copy()
+                ->startOfMonth();
+
+        if (
+            $dataCompraValidacao->day
+            > $cartao->dia_fechamento
+        ) {
+            $primeiraCompetenciaValidacao
+                ->addMonthNoOverflow();
+        }
+
+        $quantidadeParcelasValidacao =
+            (int) $dados['quantidade_parcelas'];
+
+        for (
+            $numero = 1;
+            $numero <= $quantidadeParcelasValidacao;
+            $numero++
+        ) {
+            $competenciaValidacao =
+                $primeiraCompetenciaValidacao
+                    ->copy()
+                    ->addMonthsNoOverflow(
+                        $numero - 1
+                    )
+                    ->format('Y-m');
+
+            $faturaPaga = Fatura::query()
+                ->where(
+                    'user_id',
+                    $userId
+                )
+                ->where(
+                    'cartao_id',
+                    $cartao->id
+                )
+                ->where(
+                    'competencia',
+                    $competenciaValidacao
+                )
+                ->where(
+                    'situacao',
+                    'paga'
+                )
+                ->exists();
+
+            if ($faturaPaga) {
+                $competenciaFormatada =
+                    Carbon::createFromFormat(
+                        'Y-m',
+                        $competenciaValidacao
+                    )->format('m/Y');
+
+                return back()
+                    ->withInput()
+                    ->withErrors([
+                        'data_compra' =>
+                            'Não é possível cadastrar esta compra. '
+                            . 'A fatura de '
+                            . $competenciaFormatada
+                            . ' já está paga.',
+                    ]);
+            }
+        }
+
+
         DB::transaction(function () use (
             $dados,
             $userId,

@@ -26,6 +26,7 @@ class User extends Authenticatable
         'ultimo_acesso_sga',
         'solicitou_exclusao_em',
         'excluido_em',
+        'is_admin',
     ];
 
     protected $hidden = [
@@ -43,6 +44,7 @@ class User extends Authenticatable
             'ultimo_acesso_sga' => 'datetime',
             'solicitou_exclusao_em' => 'datetime',
             'excluido_em' => 'datetime',
+            'is_admin' => 'boolean',
         ];
     }
 

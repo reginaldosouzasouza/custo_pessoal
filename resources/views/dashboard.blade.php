@@ -155,6 +155,24 @@
         text-decoration:underline;
     }
 
+
+    .dashboard-section {
+        margin-bottom: 22px;
+    }
+
+    .dashboard-section-title {
+        margin: 0 0 10px;
+        font-size: 15px;
+        font-weight: 700;
+        color: #263238;
+    }
+
+    .dashboard-section-subtitle {
+        margin: -5px 0 12px;
+        font-size: 11px;
+        color: #6b7280;
+    }
+
     /* =========================================================
        GRÁFICOS
     ========================================================= */
@@ -527,250 +545,356 @@
 
 
 {{-- =========================================================
-     CARDS PRINCIPAIS
+     SITUAÇÃO ATUAL
 ========================================================= --}}
 
-<div class="dashboard-cards">
+<div class="dashboard-section">
 
-    {{-- RECEITAS --}}
-    <div class="cp-card summary-card">
+    <h2 class="dashboard-section-title">
+        Situação atual
+    </h2>
 
-        <div class="summary-icon icon-green">
-            ↗
-        </div>
+    <p class="dashboard-section-subtitle">
+        O que já aconteceu e o dinheiro realmente disponível hoje.
+    </p>
 
-        <div>
-            <div class="summary-title saldo-title">
-                Receitas do mês
+    <div class="dashboard-cards">
 
-                <span class="saldo-help">
-                    ?
-                    <span class="saldo-tooltip">
-                        Total das receitas efetivamente recebidas no mês.
-                        Receitas ainda pendentes não entram neste valor.
+        {{-- RECEITAS RECEBIDAS --}}
+        <div class="cp-card summary-card">
+
+            <div class="summary-icon icon-green">
+                ↗
+            </div>
+
+            <div>
+                <div class="summary-title saldo-title">
+                    Receitas do mês
+
+                    <span class="saldo-help">
+                        ?
+                        <span class="saldo-tooltip">
+                            Total das receitas efetivamente recebidas no mês.
+                            Receitas ainda pendentes não entram neste valor.
+                        </span>
                     </span>
-                </span>
+                </div>
+
+                <div class="summary-value value-blue">
+                    R$ {{ number_format($receitasMes ?? 0, 2, ',', '.') }}
+                </div>
+
+                <div class="summary-note">
+                    Total recebido no mês
+                </div>
             </div>
 
-            <div class="summary-value value-blue">
-                R$ {{ number_format($receitasMes ?? 0, 2, ',', '.') }}
-            </div>
-
-            <div class="summary-note">
-                Total recebido no mês
-            </div>
         </div>
 
-    </div>
 
+        {{-- DESPESAS PAGAS --}}
+        <div class="cp-card summary-card">
 
-    {{-- DESPESAS --}}
-    <div class="cp-card summary-card">
+            <div class="summary-icon icon-red">
+                ↘
+            </div>
 
-        <div class="summary-icon icon-red">
-            ↘
-        </div>
+            <div>
+                <div class="summary-title saldo-title">
+                    Despesas Pagas do mês
 
-        <div>
-            <div class="summary-title saldo-title">
-                Despesas Pagas do mês
-
-                <span class="saldo-help">
-                    ?
-                    <span class="saldo-tooltip">
-                        Total de despesas efetivamente pagas no mês.
-                        Despesas ainda pendentes não entram neste valor.
+                    <span class="saldo-help">
+                        ?
+                        <span class="saldo-tooltip">
+                            Total de despesas efetivamente pagas no mês.
+                            Despesas ainda pendentes não entram neste valor.
+                        </span>
                     </span>
-                </span>
+                </div>
+
+                <div class="summary-value value-red">
+                    R$ {{ number_format($despesasMes ?? 0, 2, ',', '.') }}
+                </div>
+
+                <div class="summary-note">
+                    Total gasto no mês
+                </div>
             </div>
 
-            <div class="summary-value value-red">
-                R$ {{ number_format($despesasMes ?? 0, 2, ',', '.') }}
-            </div>
-
-            <div class="summary-note">
-                Total gasto no mês
-            </div>
         </div>
 
-    </div>
 
+        {{-- SALDO ATUAL --}}
+        <div class="cp-card summary-card">
 
-    {{-- PREVISÃO DE DESPESAS DO MÊS --}}
-    <div class="cp-card summary-card">
+            <div class="summary-icon {{ ($saldoAtual ?? 0) < 0 ? 'icon-red' : 'icon-green' }}">
+                $
+            </div>
 
-        <div class="summary-icon icon-purple">
-            ◫
-        </div>
+            <div>
 
-        <div>
-            <div class="summary-title saldo-title">
-                Previsão de despesas
+                <div class="summary-title saldo-title">
+                    Saldo atual
 
-                <span class="saldo-help">
-                    ?
-                    <span class="saldo-tooltip">
-                        Soma das despesas lançadas, contas recorrentes
-                        e faturas de cartão com vencimento no mês atual.
-                        Compras do cartão não são somadas novamente.
+                    <span class="saldo-help">
+                        ?
+                        <span class="saldo-tooltip">
+                            Soma do dinheiro disponível hoje nas contas bancárias,
+                            digitais e carteiras ativas. Não inclui receitas que
+                            ainda não foram recebidas.
+                        </span>
                     </span>
-                </span>
-            </div>
+                </div>
 
-            <div class="summary-value value-purple">
-                R$ {{ number_format($previsaoDespesasMes ?? 0, 2, ',', '.') }}
-            </div>
+                <div class="summary-value {{ ($saldoAtual ?? 0) < 0 ? 'value-red' : 'value-green' }}">
+                    R$ {{ number_format($saldoAtual ?? 0, 2, ',', '.') }}
+                </div>
 
-            <div class="summary-note">
-                Total previsto para o mês
-            </div>
+                <div class="summary-note">
+                    Dinheiro disponível hoje
+                </div>
 
-            <a
-                href="{{ route('previsao-despesas.index') }}"
-                class="summary-link"
-            >
-                Ver previsão
-            </a>
-        </div>
+                @if(!empty($contasAtivas) && $contasAtivas->count() > 0)
 
-    </div>
+                    <div style="
+                        margin-top:6px;
+                        font-size:10px;
+                        color:#6b7280;
+                        line-height:1.5;
+                    ">
 
+                        @foreach($contasAtivas as $conta)
 
-    {{-- SALDO ATUAL --}}
-    <div class="cp-card summary-card">
+                            <span>
+                                {{ $conta->nome }}:
+                                R$ {{ number_format($conta->saldo_atual, 2, ',', '.') }}
+                            </span>
 
-        <div class="summary-icon {{ ($saldoAtual ?? 0) < 0 ? 'icon-red' : 'icon-green' }}">
-            $
-        </div>
+                            @if(!$loop->last)
+                                •
+                            @endif
 
-        <div>
+                        @endforeach
 
-            <div class="summary-title saldo-title">
-                Saldo atual
+                    </div>
 
-                <span class="saldo-help">
-                    ?
-                    <span class="saldo-tooltip">
-                        Saldo atual é a soma do dinheiro disponível
-                        em todas as suas contas bancárias e Digital,  e as carteiras ativas.
-                        Não representa apenas receitas menos despesas do mês.
-                    </span>
-                </span>
-            </div>
-
-            <div class="summary-value {{ ($saldoAtual ?? 0) < 0 ? 'value-red' : 'value-green' }}">
-                R$
-                {{ number_format(
-                    $saldoAtual ?? 0,
-                    2,
-                    ',',
-                    '.'
-                ) }}
-            </div>
-
-            <div class="summary-note">
-                Saldo disponível nas contas
-            </div>
-
-            @if(!empty($contasAtivas) && $contasAtivas->count() > 0)
-
-            <div style="
-                margin-top:6px;
-                font-size:10px;
-                color:#6b7280;
-                line-height:1.5;
-            ">
-
-                @foreach($contasAtivas as $conta)
-
-                    <span>
-                        {{ $conta->nome }}:
-                        R$
-                        {{ number_format(
-                            $conta->saldo_atual,
-                            2,
-                            ',',
-                            '.'
-                        ) }}
-                    </span>
-
-                    @if(!$loop->last)
-                        •
-                    @endif
-
-                @endforeach
+                @endif
 
             </div>
-
-        @endif
 
         </div>
 
     </div>
 
+</div>
 
-    {{-- CARTÃO --}}
-    <div class="cp-card summary-card">
 
-        <div class="summary-icon icon-purple">
-            ▤
+{{-- =========================================================
+     PREVISÃO DESTE MÊS
+========================================================= --}}
+
+<div class="dashboard-section">
+
+    <h2 class="dashboard-section-title">
+        Previsão deste mês
+    </h2>
+
+    <p class="dashboard-section-subtitle">
+        O que ainda pode entrar e sair até o fim do mês.
+    </p>
+
+    <div class="dashboard-cards">
+
+        {{-- RECEITAS PREVISTAS --}}
+        <div class="cp-card summary-card">
+
+            <div class="summary-icon icon-blue">
+                ↗
+            </div>
+
+            <div>
+                <div class="summary-title saldo-title">
+                    Receitas previstas
+
+                    <span class="saldo-help">
+                        ?
+                        <span class="saldo-tooltip">
+                            Total das receitas pendentes com recebimento previsto
+                            para o mês atual. Este valor ainda não está disponível
+                            no saldo atual.
+                        </span>
+                    </span>
+                </div>
+
+                <div class="summary-value value-blue">
+                    R$ {{ number_format($receitasPrevistasMes ?? 0, 2, ',', '.') }}
+                </div>
+
+                <div class="summary-note">
+                    Valores a receber no mês
+                </div>
+            </div>
+
         </div>
 
-        <div>
-            
-            <div class="summary-title saldo-title">
-                Cartão em aberto
 
-                <span class="saldo-help">
-                    ?
-                    <span class="saldo-tooltip">
-                       Saldo das faturas de cartão
-                        que vencem no mês atual e ainda não foram pagas.
-                        Faturas de meses futuros não entram neste card.
+        {{-- PREVISÃO DE DESPESAS --}}
+        <div class="cp-card summary-card">
+
+            <div class="summary-icon icon-purple">
+                ◫
+            </div>
+
+            <div>
+                <div class="summary-title saldo-title">
+                    Previsão de despesas
+
+                    <span class="saldo-help">
+                        ?
+                        <span class="saldo-tooltip">
+                            Compromissos ainda previstos para o mês atual,
+                            incluindo despesas pendentes, parcelas, recorrências
+                            previstas e faturas ainda em aberto.
+                        </span>
                     </span>
-                </span>
+                </div>
+
+                <div class="summary-value value-purple">
+                    R$ {{ number_format($previsaoDespesasMes ?? 0, 2, ',', '.') }}
+                </div>
+
+                <div class="summary-note">
+                    Ainda previsto para pagar no mês
+                </div>
+
+                <a
+                    href="{{ route('previsao-despesas.index') }}"
+                    class="summary-link"
+                >
+                    Ver previsão
+                </a>
             </div>
 
-            <div class="summary-value value-purple">
-                R$ {{ number_format($cartaoEmAberto ?? 0, 2, ',', '.') }}
+        </div>
+
+
+        {{-- SALDO PROJETADO --}}
+        <div class="cp-card summary-card">
+
+            <div class="summary-icon {{ ($saldoProjetadoMes ?? 0) < 0 ? 'icon-red' : 'icon-cyan' }}">
+                ≈
             </div>
 
-            <div class="summary-note">
-                Faturas do mês em aberto
+            <div>
+                <div class="summary-title saldo-title">
+                    Saldo projetado do mês
+
+                    <span class="saldo-help">
+                        ?
+                        <span class="saldo-tooltip">
+                            Estimativa para o fim do mês: saldo disponível hoje
+                            + receitas ainda previstas - despesas ainda previstas
+                            para este mês. É uma projeção, não dinheiro disponível agora.
+                        </span>
+                    </span>
+                </div>
+
+                <div class="summary-value {{ ($saldoProjetadoMes ?? 0) < 0 ? 'value-red' : 'value-cyan' }}">
+                    R$ {{ number_format($saldoProjetadoMes ?? 0, 2, ',', '.') }}
+                </div>
+
+                <div class="summary-note">
+                    Estimativa para o fim do mês
+                </div>
             </div>
+
         </div>
 
     </div>
 
+</div>
 
-    {{-- PRÓXIMO MÊS --}}
-    <div class="cp-card summary-card">
 
-        <div class="summary-icon icon-cyan">
-            ▣
+{{-- =========================================================
+     COMPROMISSOS FUTUROS
+========================================================= --}}
+
+<div class="dashboard-section">
+
+    <h2 class="dashboard-section-title">
+        Compromissos futuros
+    </h2>
+
+    <p class="dashboard-section-subtitle">
+        Valores que merecem atenção agora e nos próximos períodos.
+    </p>
+
+    <div class="dashboard-cards">
+
+        {{-- CARTÃO --}}
+        <div class="cp-card summary-card">
+
+            <div class="summary-icon icon-purple">
+                ▤
+            </div>
+
+            <div>
+
+                <div class="summary-title saldo-title">
+                    Cartão em aberto
+
+                    <span class="saldo-help">
+                        ?
+                        <span class="saldo-tooltip">
+                            Saldo das faturas de cartão que vencem no mês atual
+                            e ainda não foram pagas. Faturas de meses futuros
+                            não entram neste card.
+                        </span>
+                    </span>
+                </div>
+
+                <div class="summary-value value-purple">
+                    R$ {{ number_format($cartaoEmAberto ?? 0, 2, ',', '.') }}
+                </div>
+
+                <div class="summary-note">
+                    Faturas do mês em aberto
+                </div>
+            </div>
+
         </div>
 
-        <div>
-            <div class="summary-title saldo-title">
-                Próximo mês
 
-                <span class="saldo-help">
-                    ?
-                    <span class="saldo-tooltip">
-                        Mostra os compromissos financeiros previstos
-                        para o próximo mês, incluindo despesas,
-                        parcelas e faturas com vencimento naquele período.
+        {{-- PRÓXIMO MÊS --}}
+        <div class="cp-card summary-card">
+
+            <div class="summary-icon icon-cyan">
+                ▣
+            </div>
+
+            <div>
+                <div class="summary-title saldo-title">
+                    Próximo mês
+
+                    <span class="saldo-help">
+                        ?
+                        <span class="saldo-tooltip">
+                            Mostra os compromissos financeiros previstos
+                            para o próximo mês, incluindo despesas,
+                            parcelas e faturas com vencimento naquele período.
+                        </span>
                     </span>
-                </span>
+                </div>
+
+                <div class="summary-value value-cyan">
+                    R$ {{ number_format($proximoMes ?? 0, 2, ',', '.') }}
+                </div>
+
+                <div class="summary-note">
+                    Despesas previstas
+                </div>
             </div>
 
-            <div class="summary-value value-cyan">
-                R$ {{ number_format($proximoMes ?? 0, 2, ',', '.') }}
-            </div>
-
-            <div class="summary-note">
-                Despesas previstas
-            </div>
         </div>
 
     </div>

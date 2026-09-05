@@ -20,6 +20,8 @@ use App\Http\Controllers\ParcelamentoController;
 use App\Http\Controllers\RelatorioDespesasController;
 use App\Http\Controllers\AssistenteFinanceiroController;
 use App\Http\Controllers\ContaPagarController;
+use App\Http\Controllers\PlanoAdminController;
+use App\Http\Controllers\AssinaturaAdminController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -331,6 +333,75 @@ Route::middleware('auth')->group(function () {
         '/contas-a-pagar/recorrencias/{recorrencia}/pagar',
         [ContaPagarController::class, 'pagarRecorrencia']
     )->name('contas-a-pagar.recorrencias.pagar');
+
+    Route::middleware('admin.financeiro')
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+
+        /*
+        |--------------------------------------------------------------------------
+        | PLANOS
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get(
+            '/planos',
+            [PlanoAdminController::class, 'index']
+        )->name('planos.index');
+
+        Route::post(
+            '/planos',
+            [PlanoAdminController::class, 'store']
+        )->name('planos.store');
+
+        Route::put(
+            '/planos/{plano}',
+            [PlanoAdminController::class, 'update']
+        )->name('planos.update');
+
+        Route::patch(
+            '/planos/{plano}/status',
+            [PlanoAdminController::class, 'alternarStatus']
+        )->name('planos.status');
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | ASSINATURAS
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get(
+            '/assinaturas',
+            [AssinaturaAdminController::class, 'index']
+        )->name('assinaturas.index');
+
+        Route::post(
+            '/assinaturas/teste',
+            [AssinaturaAdminController::class, 'liberarTeste']
+        )->name('assinaturas.teste');
+
+        Route::post(
+            '/assinaturas/ativar',
+            [AssinaturaAdminController::class, 'ativarPlano']
+        )->name('assinaturas.ativar');
+
+        Route::post(
+            '/assinaturas/{assinatura}/renovar',
+            [AssinaturaAdminController::class, 'renovar']
+        )->name('assinaturas.renovar');
+
+        Route::patch(
+            '/assinaturas/{assinatura}/suspender',
+            [AssinaturaAdminController::class, 'suspender']
+        )->name('assinaturas.suspender');
+
+        Route::patch(
+            '/assinaturas/{assinatura}/cancelar',
+            [AssinaturaAdminController::class, 'cancelar']
+        )->name('assinaturas.cancelar');
+    });
 
 
 });
