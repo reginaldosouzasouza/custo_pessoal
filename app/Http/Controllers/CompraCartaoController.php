@@ -574,6 +574,112 @@ class CompraCartaoController extends Controller
 
     /*
     |--------------------------------------------------------------------------
+    | EXCLUI COMPRA DO CARTÃO
+    |--------------------------------------------------------------------------
+    |
+    | Regras:
+    | - a compra precisa pertencer ao usuário autenticado;
+    | - não permite exclusão se alguma parcela/fatura já estiver paga;
+    | - exclui as parcelas da compra;
+    | - recalcula as faturas afetadas;
+    | - remove faturas vazias e ainda não pagas;
+    | - tudo acontece dentro de uma única transação.
+    |
+    */
+    public function destroy(int $compraCartao)
+    {
+        $userId = auth()->id();
+
+        $compra = CompraCartao::query()
+            ->with([
+                'parcelas.fatura',
+            ])
+            ->where('id', $compraCartao)
+            ->where('user_id', $userId)
+            ->firstOrFail();
+
+        $possuiParcelaPaga = $compra
+            ->parcelas
+            ->contains(function ($parcela) {
+                return $parcela->situacao === 'paga';
+            });
+
+        $possuiFaturaPaga = $compra
+            ->parcelas
+            ->contains(function ($parcela) {
+                return $parcela->fatura
+                    && $parcela->fatura->situacao === 'paga';
+            });
+
+        if ($possuiParcelaPaga || $possuiFaturaPaga) {
+            return redirect()
+                ->route('compras-cartao.index')
+                ->with(
+                    'error',
+                    'Esta compra não pode ser excluída porque existe parcela ou fatura já paga.'
+                );
+        }
+
+        DB::transaction(function () use (
+            $compra,
+            $userId
+        ) {
+            $faturaIds = $compra
+                ->parcelas
+                ->pluck('fatura_id')
+                ->filter()
+                ->unique()
+                ->values();
+
+            ParcelaCartao::query()
+                ->where('user_id', $userId)
+                ->where('compra_cartao_id', $compra->id)
+                ->delete();
+
+            $compra->delete();
+
+            foreach ($faturaIds as $faturaId) {
+                $fatura = Fatura::query()
+                    ->where('id', $faturaId)
+                    ->where('user_id', $userId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$fatura) {
+                    continue;
+                }
+
+                $novoTotal = ParcelaCartao::query()
+                    ->where('user_id', $userId)
+                    ->where('fatura_id', $fatura->id)
+                    ->where('situacao', '!=', 'cancelada')
+                    ->sum('valor');
+
+                if ((float) $novoTotal <= 0) {
+                    $fatura->delete();
+                    continue;
+                }
+
+                $fatura->valor_total = round(
+                    (float) $novoTotal,
+                    2
+                );
+
+                $fatura->save();
+            }
+        });
+
+        return redirect()
+            ->route('compras-cartao.index')
+            ->with(
+                'success',
+                'Compra excluída com sucesso. As faturas relacionadas foram recalculadas.'
+            );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
     | MONTA DATA SEGURA
     |--------------------------------------------------------------------------
     |

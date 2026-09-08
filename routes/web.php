@@ -214,6 +214,12 @@ Route::middleware('auth')->group(function () {
         [CompraCartaoController::class, 'store']
     )->name('compras-cartao.store');
 
+
+    Route::delete(
+        '/compras-cartao/{compraCartao}',
+        [CompraCartaoController::class, 'destroy']
+    )->name('compras-cartao.destroy');
+
     Route::get(
         '/faturas',
         [FaturaController::class, 'index']

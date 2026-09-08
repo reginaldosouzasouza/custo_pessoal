@@ -152,6 +152,55 @@
         cursor:pointer;
     }
 
+
+    .acoes-compra {
+        display:flex;
+        justify-content:flex-end;
+        align-items:center;
+        gap:8px;
+        flex-wrap:wrap;
+    }
+
+    .form-excluir {
+        margin:0;
+    }
+
+    .btn-excluir {
+        min-height:34px;
+        padding:0 10px;
+        border-radius:7px;
+        border:1px solid #fecaca;
+        background:#fff;
+        color:#b91c1c;
+        font-size:11px;
+        font-weight:700;
+        cursor:pointer;
+    }
+
+    .btn-excluir:hover {
+        background:#fef2f2;
+    }
+
+    .alerta-sistema {
+        margin-bottom:16px;
+        padding:12px 14px;
+        border-radius:10px;
+        font-size:12px;
+        font-weight:600;
+    }
+
+    .alerta-sucesso {
+        background:#ecfdf5;
+        border:1px solid #a7f3d0;
+        color:#166534;
+    }
+
+    .alerta-erro {
+        background:#fef2f2;
+        border:1px solid #fecaca;
+        color:#991b1b;
+    }
+
     .empty-state {
         text-align:center;
         padding:50px 20px;
@@ -474,6 +523,19 @@
         .pagination-wrap {
             overflow-x:auto;
         }
+
+
+        .acoes-compra {
+            width:100%;
+            flex-direction:column;
+            align-items:stretch;
+        }
+
+        .acoes-compra .btn-detalhes,
+        .acoes-compra .form-excluir,
+        .acoes-compra .btn-excluir {
+            width:100%;
+        }
     }
 </style>
 @endpush
@@ -515,6 +577,19 @@
     </div>
 
 </div>
+
+
+@if(session('success'))
+    <div class="alerta-sistema alerta-sucesso">
+        {{ session('success') }}
+    </div>
+@endif
+
+@if(session('error'))
+    <div class="alerta-sistema alerta-erro">
+        {{ session('error') }}
+    </div>
+@endif
 
 
 <div class="cp-card table-card">
@@ -700,12 +775,7 @@
 
                         <td>
 
-                            <div
-                                style="
-                                    display:flex;
-                                    justify-content:flex-end;
-                                "
-                            >
+                            <div class="acoes-compra">
 
                                 <button
                                     type="button"
@@ -720,6 +790,25 @@
                                 >
                                     Ver parcelas
                                 </button>
+
+                                <form
+                                    method="POST"
+                                    action="{{ route('compras-cartao.destroy', $compra->id) }}"
+                                    class="form-excluir"
+                                    onsubmit="return confirm(
+                                        'Excluir a compra {{ addslashes($compra->descricao) }} de R$ {{ number_format($compra->valor_total, 2, ',', '.') }}? Esta ação removerá {{ $totalParcelas }} parcela(s) e recalculará as faturas relacionadas.'
+                                    );"
+                                >
+                                    @csrf
+                                    @method('DELETE')
+
+                                    <button
+                                        type="submit"
+                                        class="btn-excluir"
+                                    >
+                                        Excluir
+                                    </button>
+                                </form>
 
                             </div>
 
@@ -898,19 +987,42 @@
 
                     <div class="compra-mobile-acoes">
 
-                        <button
-                            type="button"
-                            class="btn-detalhes"
-                            onclick="
-                                document
-                                    .getElementById(
-                                        'parcelasCompra{{ $compra->id }}'
-                                    )
-                                    .showModal()
-                            "
-                        >
-                            Ver parcelas
-                        </button>
+                        <div class="acoes-compra">
+
+                            <button
+                                type="button"
+                                class="btn-detalhes"
+                                onclick="
+                                    document
+                                        .getElementById(
+                                            'parcelasCompra{{ $compra->id }}'
+                                        )
+                                        .showModal()
+                                "
+                            >
+                                Ver parcelas
+                            </button>
+
+                            <form
+                                method="POST"
+                                action="{{ route('compras-cartao.destroy', $compra->id) }}"
+                                class="form-excluir"
+                                onsubmit="return confirm(
+                                    'Excluir a compra {{ addslashes($compra->descricao) }} de R$ {{ number_format($compra->valor_total, 2, ',', '.') }}? Esta ação removerá {{ $totalParcelas }} parcela(s) e recalculará as faturas relacionadas.'
+                                );"
+                            >
+                                @csrf
+                                @method('DELETE')
+
+                                <button
+                                    type="submit"
+                                    class="btn-excluir"
+                                >
+                                    Excluir
+                                </button>
+                            </form>
+
+                        </div>
 
                     </div>
 

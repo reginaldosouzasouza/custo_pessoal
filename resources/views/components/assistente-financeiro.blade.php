@@ -13,40 +13,28 @@
     z-index:1500;
     border:3px solid #0d6efd;
     box-shadow:0 10px 30px rgba(13,110,253,.30);
-    animation: pulseAssistente 1.8s infinite;
-    transition: transform .2s ease;
+    animation:pulseAssistente 1.8s infinite;
+    transition:transform .2s ease;
 }
-
 .sga-assistente-botao img{
     width:100%;
     height:100%;
     object-fit:cover;
     display:block;
 }
-
-.sga-assistente-botao:hover{
-    transform: scale(1.08);
-}
-
+.sga-assistente-botao:hover{transform:scale(1.08)}
 .sga-assistente-identidade{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    min-width:0;
+    display:flex;align-items:center;gap:10px;min-width:0
 }
-
 .sga-assistente-avatar{
-    width:42px;
-    height:42px;
-    border-radius:50%;
-    object-fit:cover;
-    flex-shrink:0;
-    background:#fff;
-    border:2px solid rgba(255,255,255,.9);
+    width:42px;height:42px;border-radius:50%;object-fit:cover;flex-shrink:0;
+    background:#fff;border:2px solid rgba(255,255,255,.9)
 }
-
-.sga-assistente-textos{
-    min-width:0;
+.sga-assistente-textos{min-width:0}
+@keyframes pulseAssistente{
+    0%{transform:scale(1);box-shadow:0 0 0 0 rgba(13,110,253,.45)}
+    50%{transform:scale(1.06);box-shadow:0 0 0 12px rgba(13,110,253,0)}
+    100%{transform:scale(1);box-shadow:0 0 0 0 rgba(13,110,253,0)}
 }
 .sga-assistente-painel{
     position:fixed;right:22px;bottom:92px;width:min(390px,calc(100vw - 30px));
@@ -55,7 +43,6 @@
     z-index:1500;box-shadow:0 20px 55px rgba(15,23,42,.22)
 }
 .sga-assistente-painel.aberto{display:flex}
-.sga-assistente-painel *{box-sizing:border-box}
 .sga-assistente-topo{
     padding:15px 16px;background:linear-gradient(135deg,#07345c,#0d6efd);
     color:#fff;display:flex;align-items:center;justify-content:space-between;gap:12px;
@@ -87,6 +74,30 @@
     font-weight:600;text-decoration:none;white-space:normal
 }
 .sga-assistente-manual-link:hover{background:#dbeafe}
+
+.sga-assistente-acoes{
+    display:flex;gap:8px;margin-top:10px;flex-wrap:wrap
+}
+.sga-assistente-acao{
+    border:0;border-radius:9px;padding:8px 11px;font-size:12px;font-weight:700;
+    cursor:pointer;transition:.15s ease
+}
+.sga-assistente-acao:disabled{
+    opacity:.55;cursor:wait
+}
+.sga-assistente-acao.confirmar{
+    background:#16a34a;color:#fff
+}
+.sga-assistente-acao.confirmar:hover{
+    background:#15803d
+}
+.sga-assistente-acao.cancelar{
+    background:#fff;color:#b91c1c;border:1px solid #fecaca
+}
+.sga-assistente-acao.cancelar:hover{
+    background:#fef2f2
+}
+
 .sga-assistente-atalhos{
     display:flex;gap:7px;overflow-x:auto;padding:10px 12px;background:#fff;
     border-top:1px solid #eef0f3;scrollbar-width:none;flex-shrink:0
@@ -117,23 +128,6 @@
     min-width:70px;border:0;border-radius:10px;padding:0 13px;background:#0d6efd;
     color:#fff;font-weight:600;cursor:pointer
 }
-
-
-@keyframes pulseAssistente {
-    0% {
-        transform: scale(1);
-        box-shadow: 0 0 0 0 rgba(13, 110, 253, 0.45);
-    }
-    50% {
-        transform: scale(1.06);
-        box-shadow: 0 0 0 12px rgba(13, 110, 253, 0);
-    }
-    100% {
-        transform: scale(1);
-        box-shadow: 0 0 0 0 rgba(13, 110, 253, 0);
-    }
-}
-
 .sga-assistente-enviar:disabled{opacity:.6;cursor:wait}
 
 @media(max-width:768px){
@@ -143,6 +137,8 @@
     }
     .sga-assistente-topo{padding-top:max(15px,env(safe-area-inset-top))}
     .sga-assistente-form{padding-bottom:max(12px,env(safe-area-inset-bottom))}
+    .sga-assistente-acoes{flex-direction:column}
+    .sga-assistente-acao{width:100%}
 }
 </style>
 
@@ -163,45 +159,33 @@
     class="sga-assistente-painel"
     id="sgaAssistentePainel"
     aria-label="Assistente SGA Finanças"
->   
+>
     <div class="sga-assistente-topo">
+        <div class="sga-assistente-identidade">
+            <img
+                src="{{ asset('images/assistente-financeiro.png') }}"
+                alt="Assistente SGA Finanças"
+                class="sga-assistente-avatar"
+            >
 
-    <div class="sga-assistente-identidade">
-
-        <img
-            src="{{ asset('images/assistente-financeiro.png') }}"
-            alt="Assistente SGA Finanças"
-            class="sga-assistente-avatar"
-        >
-
-        <div class="sga-assistente-textos">
-
-            <div class="sga-assistente-titulo">
-                Assistente SGA Finanças
+            <div class="sga-assistente-textos">
+                <div class="sga-assistente-titulo">Assistente SGA Finanças</div>
+                <div class="sga-assistente-subtitulo">Seu assistente inteligente financeiro</div>
             </div>
-
-            <div class="sga-assistente-subtitulo">
-                Seu assistente inteligente financeiro
-            </div>
-
         </div>
 
-    </div>
         <button
             type="button"
             class="sga-assistente-fechar"
             id="sgaAssistenteFechar"
             aria-label="Fechar assistente"
         >×</button>
-
     </div>
 
     <div class="sga-assistente-mensagens" id="sgaAssistenteMensagens">
         <div class="sga-assistente-msg bot">
-
-            Olá! Eu sou o Assistente SGA Finanças. Posso ajudar com gastos do mês,
-            pendências, atrasos, próximos vencimentos, categorias e também com o Manual do sistema.
-            Pode perguntar com áudio, ou digitar se preferir, ou escolher uma das opções abaixo.
+            Olá! Posso responder sobre gastos do mês, pendências, atrasos,
+            próximos vencimentos, categorias e também sobre o Manual do sistema.
         </div>
     </div>
 
@@ -268,6 +252,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function abrirPainel() {
         painel?.classList.add('aberto');
+
         setTimeout(function () {
             input?.focus();
         }, 100);
@@ -277,31 +262,155 @@ document.addEventListener('DOMContentLoaded', function () {
         painel?.classList.remove('aberto');
     }
 
-    function adicionarMensagem(texto, tipo, manualUrl = null) {
-        const elemento = document.createElement('div');
-        elemento.className = 'sga-assistente-msg ' + tipo;
+    function limparInstrucoesConfirmacao(texto) {
+        return texto
+            .replace(
+                /Dados localizados no seu cadastro\.\s*Para gravar, digite exatamente:\s*CONFIRMAR LANÇAMENTO\s*Para desistir, digite:\s*CANCELAR LANÇAMENTO\s*Ainda não foi gravado\./iu,
+                'Dados localizados no seu cadastro.\nConfira os dados acima e escolha uma opção:'
+            )
+            .trim();
+    }
 
-        const conteudo = document.createElement('div');
-        conteudo.textContent = texto;
-        elemento.appendChild(conteudo);
+    function adicionarMensagem(
+        texto,
+        tipo,
+        manualUrl = null,
+        mostrarAcoesLancamento = false
+    ) {
+        const elemento = document.createElement('div');
+
+        elemento.className =
+            'sga-assistente-msg ' + tipo;
+
+        const conteudo =
+            document.createElement('div');
+
+        conteudo.textContent =
+            texto;
+
+        elemento.appendChild(
+            conteudo
+        );
 
         if (manualUrl) {
-            const link = document.createElement('a');
-            link.className = 'sga-assistente-manual-link';
-            link.href = manualUrl;
-            link.target = '_blank';
-            link.rel = 'noopener';
-            link.textContent = '📖 Abrir esta parte no Manual';
-            elemento.appendChild(link);
+            const link =
+                document.createElement('a');
+
+            link.className =
+                'sga-assistente-manual-link';
+
+            link.href =
+                manualUrl;
+
+            link.target =
+                '_blank';
+
+            link.rel =
+                'noopener';
+
+            link.textContent =
+                '📖 Abrir esta parte no Manual';
+
+            elemento.appendChild(
+                link
+            );
         }
 
-        mensagens.appendChild(elemento);
-        mensagens.scrollTop = mensagens.scrollHeight;
+        if (
+            mostrarAcoesLancamento
+            && tipo === 'bot'
+        ) {
+            const acoes =
+                document.createElement('div');
+
+            acoes.className =
+                'sga-assistente-acoes';
+
+            const confirmar =
+                document.createElement('button');
+
+            confirmar.type =
+                'button';
+
+            confirmar.className =
+                'sga-assistente-acao confirmar';
+
+            confirmar.textContent =
+                '✓ Confirmar lançamento';
+
+            const cancelar =
+                document.createElement('button');
+
+            cancelar.type =
+                'button';
+
+            cancelar.className =
+                'sga-assistente-acao cancelar';
+
+            cancelar.textContent =
+                'Cancelar';
+
+            function bloquearAcoes() {
+                confirmar.disabled =
+                    true;
+
+                cancelar.disabled =
+                    true;
+            }
+
+            confirmar.addEventListener(
+                'click',
+                function () {
+
+                    bloquearAcoes();
+
+                    perguntar(
+                        'CONFIRMAR LANÇAMENTO',
+                        true
+                    );
+                }
+            );
+
+            cancelar.addEventListener(
+                'click',
+                function () {
+
+                    bloquearAcoes();
+
+                    perguntar(
+                        'CANCELAR LANÇAMENTO',
+                        true
+                    );
+                }
+            );
+
+            acoes.appendChild(
+                confirmar
+            );
+
+            acoes.appendChild(
+                cancelar
+            );
+
+            elemento.appendChild(
+                acoes
+            );
+        }
+
+        mensagens.appendChild(
+            elemento
+        );
+
+        mensagens.scrollTop =
+            mensagens.scrollHeight;
     }
 
     function extrairLinkManual(texto) {
-        const regex = /\[\[manual:(.+?)\]\]/;
-        const encontrado = texto.match(regex);
+        const regex =
+            /\[\[manual:(.+?)\]\]/;
+
+        const encontrado =
+            texto.match(regex);
 
         if (!encontrado) {
             return {
@@ -311,63 +420,139 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         return {
-            texto: texto.replace(regex, '').trim(),
-            url: encontrado[1]
+            texto:
+                texto
+                    .replace(
+                        regex,
+                        ''
+                    )
+                    .trim(),
+
+            url:
+                encontrado[1]
         };
     }
 
-    async function perguntar(pergunta) {
-        const texto = pergunta.trim();
+    async function perguntar(
+        pergunta,
+        comandoInterno = false
+    ) {
+        const texto =
+            pergunta.trim();
 
         if (!texto) {
             return;
         }
 
-        adicionarMensagem(texto, 'usuario');
+        /*
+         * Nos botões de confirmação/cancelamento,
+         * exibimos uma mensagem amigável em vez do
+         * comando técnico em caixa alta.
+         */
+        if (comandoInterno) {
+            adicionarMensagem(
+                texto === 'CONFIRMAR LANÇAMENTO'
+                    ? 'Confirmar lançamento'
+                    : 'Cancelar lançamento',
+                'usuario'
+            );
+        } else {
+            adicionarMensagem(
+                texto,
+                'usuario'
+            );
+        }
+
         input.value = '';
-        enviar.disabled = true;
-        enviar.textContent = '...';
+
+        enviar.disabled =
+            true;
+
+        enviar.textContent =
+            '...';
 
         try {
-            const resposta = await fetch(
-                @json(route('assistente-financeiro.perguntar')),
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': token
-                    },
-                    body: JSON.stringify({
-                        pergunta: texto
-                    })
-                }
-            );
+            const resposta =
+                await fetch(
+                    @json(route('assistente-financeiro.perguntar')),
+                    {
+                        method: 'POST',
+
+                        headers: {
+                            'Content-Type':
+                                'application/json',
+
+                            'Accept':
+                                'application/json',
+
+                            'X-CSRF-TOKEN':
+                                token
+                        },
+
+                        body:
+                            JSON.stringify({
+                                pergunta:
+                                    texto
+                            })
+                    }
+                );
 
             if (!resposta.ok) {
-                throw new Error('Falha ao consultar o assistente.');
+                throw new Error(
+                    'Falha ao consultar o assistente.'
+                );
             }
 
-            const dados = await resposta.json();
+            const dados =
+                await resposta.json();
+
             const respostaBot =
-                dados.resposta ?? 'Não consegui responder agora.';
+                dados.resposta
+                ?? 'Não consegui responder agora.';
+
+            const temConfirmacao =
+                respostaBot.includes(
+                    'CONFIRMAR LANÇAMENTO'
+                )
+                &&
+                respostaBot.includes(
+                    'CANCELAR LANÇAMENTO'
+                );
 
             const manual =
-                extrairLinkManual(respostaBot);
+                extrairLinkManual(
+                    respostaBot
+                );
+
+            const textoExibido =
+                temConfirmacao
+                    ? limparInstrucoesConfirmacao(
+                        manual.texto
+                    )
+                    : manual.texto;
 
             adicionarMensagem(
-                manual.texto,
+                textoExibido,
                 'bot',
-                manual.url
+                manual.url,
+                temConfirmacao
             );
+
         } catch (erro) {
+
             adicionarMensagem(
                 'Não consegui consultar seus dados agora. Tente novamente.',
                 'bot'
             );
+
         } finally {
-            enviar.disabled = false;
-            enviar.textContent = 'Enviar';
+
+            enviar.disabled =
+                false;
+
+            enviar.textContent =
+                'Enviar';
+
             input.focus();
         }
     }
@@ -376,55 +561,129 @@ document.addEventListener('DOMContentLoaded', function () {
         window.SpeechRecognition
         || window.webkitSpeechRecognition;
 
-    if (SpeechRecognition && microfone) {
-        const reconhecimento = new SpeechRecognition();
+    if (
+        SpeechRecognition
+        && microfone
+    ) {
+        const reconhecimento =
+            new SpeechRecognition();
 
-        reconhecimento.lang = 'pt-BR';
-        reconhecimento.interimResults = false;
-        reconhecimento.continuous = false;
+        reconhecimento.lang =
+            'pt-BR';
 
-        microfone.addEventListener('click', function () {
-            try {
-                reconhecimento.start();
-                microfone.classList.add('ouvindo');
-                microfone.textContent = '●';
-            } catch (erro) {
+        reconhecimento.interimResults =
+            false;
+
+        reconhecimento.continuous =
+            false;
+
+        microfone.addEventListener(
+            'click',
+            function () {
+
+                try {
+                    reconhecimento.start();
+
+                    microfone.classList.add(
+                        'ouvindo'
+                    );
+
+                    microfone.textContent =
+                        '●';
+
+                } catch (erro) {
+                }
             }
-        });
+        );
 
-        reconhecimento.addEventListener('result', function (event) {
-            const texto = event.results[0][0].transcript;
-            input.value = texto;
-            input.focus();
-        });
+        reconhecimento.addEventListener(
+            'result',
+            function (event) {
 
-        reconhecimento.addEventListener('end', function () {
-            microfone.classList.remove('ouvindo');
-            microfone.textContent = '🎤';
-        });
+                const texto =
+                    event
+                        .results[0][0]
+                        .transcript;
 
-        reconhecimento.addEventListener('error', function () {
-            microfone.classList.remove('ouvindo');
-            microfone.textContent = '🎤';
-        });
+                input.value =
+                    texto;
+
+                input.focus();
+            }
+        );
+
+        reconhecimento.addEventListener(
+            'end',
+            function () {
+
+                microfone.classList.remove(
+                    'ouvindo'
+                );
+
+                microfone.textContent =
+                    '🎤';
+            }
+        );
+
+        reconhecimento.addEventListener(
+            'error',
+            function () {
+
+                microfone.classList.remove(
+                    'ouvindo'
+                );
+
+                microfone.textContent =
+                    '🎤';
+            }
+        );
+
     } else if (microfone) {
-        microfone.style.display = 'none';
+
+        microfone.style.display =
+            'none';
     }
 
-    botao?.addEventListener('click', abrirPainel);
-    fechar?.addEventListener('click', fecharPainel);
+    botao?.addEventListener(
+        'click',
+        abrirPainel
+    );
 
-    form?.addEventListener('submit', function (event) {
-        event.preventDefault();
-        perguntar(input.value);
-    });
+    fechar?.addEventListener(
+        'click',
+        fecharPainel
+    );
+
+    form?.addEventListener(
+        'submit',
+        function (event) {
+
+            event.preventDefault();
+
+            perguntar(
+                input.value
+            );
+        }
+    );
 
     document
-        .querySelectorAll('.sga-assistente-atalho')
-        .forEach(function (atalho) {
-            atalho.addEventListener('click', function () {
-                perguntar(this.dataset.pergunta ?? '');
-            });
-        });
+        .querySelectorAll(
+            '.sga-assistente-atalho'
+        )
+        .forEach(
+            function (atalho) {
+
+                atalho.addEventListener(
+                    'click',
+                    function () {
+
+                        perguntar(
+                            this.dataset.pergunta
+                            ?? ''
+                        );
+                    }
+                );
+            }
+        );
 });
 </script>
