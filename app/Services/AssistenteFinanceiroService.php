@@ -262,7 +262,7 @@ class AssistenteFinanceiroService
             $iniciouNovoLancamento =
                 preg_match(
                     '/^(?:hoje\s+|ontem\s+)?(?:eu\s+)?'
-                    . '(?:paguei|gastei|comprei|abasteci|abastecer|abastecimento|tenho\s+que\s+pagar|preciso\s+pagar|vou\s+pagar)\b/iu',
+                    . '(?:paguei|gastei|comprei|abasteci|abastecer|abastecimento|tenho\s+que\s+pagar|preciso\s+pagar|vou\s+pagar|agende|agendar|quero\s+agendar)\b/iu',
                     $perguntaOriginal
                 ) === 1;
 
@@ -3489,62 +3489,115 @@ class AssistenteFinanceiroService
         $original =
             trim($pergunta);
 
+        /*
+         * Formatos aceitos:
+         *
+         * Tenho que pagar 180 de internet dia 10
+         * Preciso pagar 95 de água amanhã
+         * Vou pagar 250 de aluguel dia 15
+         * Agende R$ 150 de mercado para 15/09
+         * Agende uma despesa de R$ 150 de mercado para 15/09
+         * Quero agendar R$ 150 de mercado para 15/09
+         * Agende uma despesa para o dia 15/09 no valor de R$ 150 mercado
+         */
+
         if (
             !preg_match(
-                '/^(?:tenho\s+que\s+pagar|preciso\s+pagar|vou\s+pagar)\b/iu',
+                '/^(?:'
+                . 'tenho\s+que\s+pagar'
+                . '|preciso\s+pagar'
+                . '|vou\s+pagar'
+                . '|agende(?:\s+uma\s+despesa)?'
+                . '|agendar(?:\s+uma\s+despesa)?'
+                . '|quero\s+agendar(?:\s+uma\s+despesa)?'
+                . ')\b/iu',
                 $original
             )
         ) {
             return null;
         }
 
-        if (
-            !preg_match(
-                '/^(?:tenho\s+que\s+pagar|preciso\s+pagar|vou\s+pagar)\s+'
-                . '(?:r\$\s*)?'
-                . '(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)'
-                . '\s*(?:reais?|real)?'
-                . '\s+(.+)$/iu',
-                $original,
-                $partes
-            )
-        ) {
-            return null;
-        }
-
-        $valorTexto =
-            trim($partes[1]);
-
-        if (
-            str_contains(
-                $valorTexto,
-                ','
-            )
-        ) {
-            $valorTexto =
-                str_replace(
-                    '.',
-                    '',
-                    $valorTexto
-                );
-
-            $valorTexto =
-                str_replace(
-                    ',',
-                    '.',
-                    $valorTexto
-                );
-        }
-
-        $valor =
-            (float) $valorTexto;
-
-        if ($valor <= 0) {
-            return null;
-        }
+        $restante =
+            preg_replace(
+                '/^(?:'
+                . 'tenho\s+que\s+pagar'
+                . '|preciso\s+pagar'
+                . '|vou\s+pagar'
+                . '|agende(?:\s+uma\s+despesa)?'
+                . '|agendar(?:\s+uma\s+despesa)?'
+                . '|quero\s+agendar(?:\s+uma\s+despesa)?'
+                . ')\s*/iu',
+                '',
+                $original
+            );
 
         $restante =
-            trim($partes[2]);
+            trim(
+                (string) $restante
+            );
+
+        $valor =
+            null;
+
+        if (
+            preg_match(
+                '/(?:^|\s)(?:no\s+valor\s+de\s+)?(?:r\$\s*)?'
+                . '(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)'
+                . '\s*(?:reais?|real)?(?:\s|$)/iu',
+                $restante,
+                $valorPartes
+            )
+        ) {
+            $valorTexto =
+                trim(
+                    $valorPartes[1]
+                );
+
+            if (
+                str_contains(
+                    $valorTexto,
+                    ','
+                )
+            ) {
+                $valorTexto =
+                    str_replace(
+                        '.',
+                        '',
+                        $valorTexto
+                    );
+
+                $valorTexto =
+                    str_replace(
+                        ',',
+                        '.',
+                        $valorTexto
+                    );
+            }
+
+            $valor =
+                (float) $valorTexto;
+
+            if ($valor <= 0) {
+                return null;
+            }
+
+            $restante =
+                preg_replace(
+                    '/(?:^|\s)(?:no\s+valor\s+de\s+)?(?:r\$\s*)?'
+                    . preg_quote(
+                        $valorPartes[1],
+                        '/'
+                    )
+                    . '\s*(?:reais?|real)?(?:\s|$)/iu',
+                    ' ',
+                    $restante,
+                    1
+                );
+        }
+
+        if ($valor === null) {
+            return null;
+        }
 
         $vencimento =
             null;
@@ -3552,9 +3605,6 @@ class AssistenteFinanceiroService
         $vencimentoDescricao =
             null;
 
-        /*
-         * Amanhã.
-         */
         if (
             preg_match(
                 '/\bamanh[aã]\b/iu',
@@ -3577,9 +3627,6 @@ class AssistenteFinanceiroService
                     $restante
                 );
 
-        /*
-         * Data completa: 10/09 ou 10/09/2026.
-         */
         } elseif (
             preg_match(
                 '/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/',
@@ -3587,7 +3634,6 @@ class AssistenteFinanceiroService
                 $dataPartes
             )
         ) {
-
             $dia =
                 (int) $dataPartes[1];
 
@@ -3595,7 +3641,9 @@ class AssistenteFinanceiroService
                 (int) $dataPartes[2];
 
             $ano =
-                !empty($dataPartes[3])
+                !empty(
+                    $dataPartes[3]
+                )
                     ? (int) $dataPartes[3]
                     : (int) now()->year;
 
@@ -3629,10 +3677,6 @@ class AssistenteFinanceiroService
                     );
             }
 
-        /*
-         * Apenas dia do mês: "dia 10".
-         * Se o dia já passou no mês atual, assume o mês seguinte.
-         */
         } elseif (
             preg_match(
                 '/\bdia\s+(\d{1,2})\b/iu',
@@ -3640,7 +3684,6 @@ class AssistenteFinanceiroService
                 $diaPartes
             )
         ) {
-
             $dia =
                 (int) $diaPartes[1];
 
@@ -3653,7 +3696,6 @@ class AssistenteFinanceiroService
                 $dia >= 1
                 && $dia <= 31
             ) {
-
                 $mes =
                     (int) $base->month;
 
@@ -3697,11 +3739,11 @@ class AssistenteFinanceiroService
                     $restante =
                         preg_replace(
                             '/\bdia\s+'
-                                . preg_quote(
-                                    $diaPartes[1],
-                                    '/'
-                                )
-                                . '\b/iu',
+                            . preg_quote(
+                                $diaPartes[1],
+                                '/'
+                            )
+                            . '\b/iu',
                             '',
                             $restante
                         );
@@ -3714,13 +3756,12 @@ class AssistenteFinanceiroService
         }
 
         $descricao =
-            trim($restante);
-
-        $descricao =
-            preg_replace(
-                '/^(?:de|do|da|em|no|na)\s+/iu',
-                '',
-                $descricao
+            trim(
+                preg_replace(
+                    '/\b(?:para|pro|pra|no\s+dia|para\s+o\s+dia|de|do|da|em|no|na)\b/iu',
+                    ' ',
+                    $restante
+                )
             );
 
         $descricao =
@@ -3767,7 +3808,6 @@ class AssistenteFinanceiroService
                 'pendente',
         ];
     }
-
 
     private function prepararDespesaPendente(
         int $userId,

@@ -395,7 +395,7 @@
         </h1>
 
         <p class="cp-page-subtitle">
-            Consulte despesas por período, origem, categoria, situação e conta.
+            Consulte despesas por período(de vencimento), origem, categoria, situação e conta.
         </p>
 
     </div>
@@ -410,7 +410,7 @@
         action="{{ route('relatorios.despesas') }}"
     >
 
-        <div class="filtros-grid">
+        <div class="filtros-grid">  <!--este período é por vencimento) -->
 
             <div class="form-group">
 
