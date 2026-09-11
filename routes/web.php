@@ -24,7 +24,7 @@ use App\Http\Controllers\PlanoAdminController;
 use App\Http\Controllers\AssinaturaAdminController;
 
 Route::get('/', function () {
-    return view('welcome');
+    return redirect('/app');
 });
 
 Route::get(
