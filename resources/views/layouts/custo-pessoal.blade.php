@@ -1189,12 +1189,11 @@
                 </div>
 
 
-                <form
+               <form
                     method="POST"
                     action="{{ route('logout') }}"
                     style="margin:0;"
                 >
-
                     @csrf
 
                     <button
@@ -1203,7 +1202,6 @@
                     >
                         Sair
                     </button>
-
                 </form>
 
             </div>

@@ -42,6 +42,12 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerateToken();
 
+        $userAgent = $request->userAgent() ?? '';
+
+        if (str_contains($userAgent, 'SGAFinancasApp')) {
+            return redirect()->away('sgaapp://fechar');
+        }
+
         return redirect()->away(
             'https://sgasistema.com.br'
         );

@@ -130,15 +130,117 @@
 }
 .sga-assistente-enviar:disabled{opacity:.6;cursor:wait}
 
-@media(max-width:768px){
-    .sga-assistente-botao{right:15px;bottom:15px}
-    .sga-assistente-painel{
-        inset:0;width:100%;height:100dvh;max-height:none;border:0;border-radius:0
+.sga-assistente-botao {
+    max-width: 62px;
+    max-height: 62px;
+}
+
+.sga-assistente-painel {
+    box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+
+    html,
+    body {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
     }
-    .sga-assistente-topo{padding-top:max(15px,env(safe-area-inset-top))}
-    .sga-assistente-form{padding-bottom:max(12px,env(safe-area-inset-bottom))}
-    .sga-assistente-acoes{flex-direction:column}
-    .sga-assistente-acao{width:100%}
+
+    /* Botão sempre preso dentro da tela */
+    .sga-assistente-botao {
+        position: fixed !important;
+        right: 14px !important;
+        bottom: calc(14px + env(safe-area-inset-bottom)) !important;
+
+        width: 58px;
+        height: 58px;
+
+        z-index: 99999 !important;
+
+        margin: 0 !important;
+        transform: none;
+    }
+
+    /*
+     * No celular o assistente vira uma tela completa.
+     */
+    .sga-assistente-painel {
+        position: fixed !important;
+
+        top: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        left: 0 !important;
+
+        width: 100vw !important;
+        max-width: 100vw !important;
+
+        height: 100vh;
+        height: 100dvh;
+
+        max-height: none !important;
+
+        margin: 0 !important;
+
+        border: 0;
+        border-radius: 0;
+
+        z-index: 100000 !important;
+
+        background: #ffffff;
+    }
+
+    .sga-assistente-painel.aberto {
+        display: flex;
+    }
+
+    .sga-assistente-topo {
+        padding-top: max(
+            15px,
+            env(safe-area-inset-top)
+        );
+
+        min-height: 68px;
+    }
+
+    .sga-assistente-mensagens {
+        flex: 1;
+        min-height: 0;
+
+        padding: 14px;
+
+        overflow-y: auto;
+        overflow-x: hidden;
+
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .sga-assistente-atalhos {
+        flex-shrink: 0;
+    }
+
+    .sga-assistente-form {
+        flex-shrink: 0;
+
+        padding-bottom: max(
+            12px,
+            env(safe-area-inset-bottom)
+        );
+    }
+
+    .sga-assistente-input {
+        min-width: 0;
+    }
+
+    .sga-assistente-acoes {
+        flex-direction: column;
+    }
+
+    .sga-assistente-acao {
+        width: 100%;
+    }
 }
 </style>
 
