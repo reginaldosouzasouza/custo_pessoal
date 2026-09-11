@@ -681,9 +681,32 @@ document.addEventListener('DOMContentLoaded', function () {
 
         microfone.addEventListener(
             'click',
-            function () {
+            async function () {
 
                 try {
+
+                    /*
+                    * Primeiro solicita permissão para usar
+                    * o microfone do aparelho.
+                    */
+                    if (
+                        navigator.mediaDevices
+                        && navigator.mediaDevices.getUserMedia
+                    ) {
+                        const stream =
+                            await navigator.mediaDevices.getUserMedia({
+                                audio: true
+                            });
+
+                        /*
+                        * A permissão já foi concedida.
+                        * Não precisamos manter o áudio aberto.
+                        */
+                        stream.getTracks().forEach(
+                            track => track.stop()
+                        );
+                    }
+
                     reconhecimento.start();
 
                     microfone.classList.add(
@@ -694,9 +717,22 @@ document.addEventListener('DOMContentLoaded', function () {
                         '●';
 
                 } catch (erro) {
+
+                    console.error(
+                        'Erro ao iniciar microfone:',
+                        erro
+                    );
+
+                    alert(
+                        'Não foi possível acessar o microfone. ' +
+                        'Verifique se a permissão de microfone está liberada para este site.'
+                    );
                 }
             }
         );
+
+
+
 
         reconhecimento.addEventListener(
             'result',
@@ -729,7 +765,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         reconhecimento.addEventListener(
             'error',
-            function () {
+            function (event) {
 
                 microfone.classList.remove(
                     'ouvindo'
@@ -737,6 +773,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 microfone.textContent =
                     '🎤';
+
+                console.error(
+                    'Erro reconhecimento de voz:',
+                    event.error
+                );
+
+                if (
+                    event.error === 'not-allowed'
+                    || event.error === 'service-not-allowed'
+                ) {
+                    alert(
+                        'A permissão para usar o microfone foi bloqueada. ' +
+                        'Libere o microfone nas permissões do navegador.'
+                    );
+                }
             }
         );
 
