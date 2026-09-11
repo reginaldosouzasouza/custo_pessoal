@@ -27,6 +27,18 @@ Route::get('/', function () {
     return redirect('/app');
 });
 
+Route::get('/app', function () {
+
+    if (auth()->check()) {
+        return redirect()->route('dashboard');
+    }
+
+    return redirect()->away(
+        'https://sgasistema.com.br/abrir-sistema'
+    );
+
+})->name('app.inicio');
+
 Route::get(
     '/dashboard',
     [DashboardController::class, 'index']
