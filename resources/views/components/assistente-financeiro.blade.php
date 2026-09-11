@@ -659,15 +659,35 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | MICROFONE / RECONHECIMENTO DE VOZ
+    |--------------------------------------------------------------------------
+    |
+    | No APP Android usamos a ponte nativa AndroidSGA.
+    | No navegador (Chrome, por exemplo) mantemos o SpeechRecognition.
+    |
+    */
+
+    const temMicrofoneAndroid =
+        !!(
+            window.AndroidSGA
+            && typeof window.AndroidSGA.abrirMicrofone === 'function'
+        );
+
     const SpeechRecognition =
         window.SpeechRecognition
         || window.webkitSpeechRecognition;
 
-    if (
-        SpeechRecognition
-        && microfone
-    ) {
-        const reconhecimento =
+    let reconhecimento =
+        null;
+
+    /*
+     * Configuração do reconhecimento de voz do navegador.
+     */
+    if (SpeechRecognition) {
+
+        reconhecimento =
             new SpeechRecognition();
 
         reconhecimento.lang =
@@ -678,60 +698,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         reconhecimento.continuous =
             false;
-
-        microfone.addEventListener(
-            'click',
-            async function () {
-
-                try {
-
-                    /*
-                    * Primeiro solicita permissão para usar
-                    * o microfone do aparelho.
-                    */
-                    if (
-                        navigator.mediaDevices
-                        && navigator.mediaDevices.getUserMedia
-                    ) {
-                        const stream =
-                            await navigator.mediaDevices.getUserMedia({
-                                audio: true
-                            });
-
-                        /*
-                        * A permissão já foi concedida.
-                        * Não precisamos manter o áudio aberto.
-                        */
-                        stream.getTracks().forEach(
-                            track => track.stop()
-                        );
-                    }
-
-                    reconhecimento.start();
-
-                    microfone.classList.add(
-                        'ouvindo'
-                    );
-
-                    microfone.textContent =
-                        '●';
-
-                } catch (erro) {
-
-                    console.error(
-                        'Erro ao iniciar microfone:',
-                        erro
-                    );
-
-                    alert(
-                        'Não foi possível acessar o microfone. ' +
-                        'Verifique se a permissão de microfone está liberada para este site.'
-                    );
-                }
-            }
-        );
-
-
 
 
         reconhecimento.addEventListener(
@@ -746,14 +712,26 @@ document.addEventListener('DOMContentLoaded', function () {
                 input.value =
                     texto;
 
+                input.dispatchEvent(
+                    new Event(
+                        'input',
+                        { bubbles: true }
+                    )
+                );
+
                 input.focus();
             }
         );
+
 
         reconhecimento.addEventListener(
             'end',
             function () {
 
+                if (!microfone) {
+                    return;
+                }
+
                 microfone.classList.remove(
                     'ouvindo'
                 );
@@ -763,16 +741,20 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         );
 
+
         reconhecimento.addEventListener(
             'error',
             function (event) {
 
-                microfone.classList.remove(
-                    'ouvindo'
-                );
+                if (microfone) {
 
-                microfone.textContent =
-                    '🎤';
+                    microfone.classList.remove(
+                        'ouvindo'
+                    );
+
+                    microfone.textContent =
+                        '🎤';
+                }
 
                 console.error(
                     'Erro reconhecimento de voz:',
@@ -783,6 +765,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     event.error === 'not-allowed'
                     || event.error === 'service-not-allowed'
                 ) {
+
                     alert(
                         'A permissão para usar o microfone foi bloqueada. ' +
                         'Libere o microfone nas permissões do navegador.'
@@ -790,11 +773,110 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             }
         );
+    }
 
-    } else if (microfone) {
 
-        microfone.style.display =
-            'none';
+    /*
+     * Clique no botão de microfone.
+     *
+     * 1) Dentro do APP: usa o reconhecimento nativo do Android.
+     * 2) No navegador: usa SpeechRecognition.
+     */
+    if (microfone) {
+
+        if (
+            !temMicrofoneAndroid
+            && !SpeechRecognition
+        ) {
+
+            microfone.style.display =
+                'none';
+
+        } else {
+
+            microfone.addEventListener(
+                'click',
+                async function () {
+
+                    /*
+                     * APP ANDROID
+                     */
+                    if (temMicrofoneAndroid) {
+
+                        try {
+
+                            window.AndroidSGA
+                                .abrirMicrofone();
+
+                        } catch (erro) {
+
+                            console.error(
+                                'Erro ao abrir microfone nativo:',
+                                erro
+                            );
+
+                            alert(
+                                'Não foi possível abrir o reconhecimento de voz do aplicativo.'
+                            );
+                        }
+
+                        return;
+                    }
+
+
+                    /*
+                     * NAVEGADOR
+                     */
+                    if (!reconhecimento) {
+                        return;
+                    }
+
+                    try {
+
+                        /*
+                         * Solicita permissão de microfone no navegador.
+                         */
+                        if (
+                            navigator.mediaDevices
+                            && navigator.mediaDevices.getUserMedia
+                        ) {
+
+                            const stream =
+                                await navigator.mediaDevices.getUserMedia({
+                                    audio: true
+                                });
+
+                            stream
+                                .getTracks()
+                                .forEach(
+                                    track => track.stop()
+                                );
+                        }
+
+                        reconhecimento.start();
+
+                        microfone.classList.add(
+                            'ouvindo'
+                        );
+
+                        microfone.textContent =
+                            '●';
+
+                    } catch (erro) {
+
+                        console.error(
+                            'Erro ao iniciar microfone:',
+                            erro
+                        );
+
+                        alert(
+                            'Não foi possível acessar o microfone. ' +
+                            'Verifique se a permissão de microfone está liberada para este site.'
+                        );
+                    }
+                }
+            );
+        }
     }
 
     botao?.addEventListener(
