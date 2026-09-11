@@ -1,0 +1,21 @@
+{
+  "name": "SGA Finanças",
+  "short_name": "SGA Finanças",
+  "start_url": "/app",
+  "display": "standalone",
+  "background_color": "#F5F8FC",
+  "theme_color": "#0B2A5B",
+  "description": "Controle financeiro pessoal com o SGA Finanças.",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

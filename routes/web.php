@@ -409,7 +409,21 @@ Route::middleware('auth')->group(function () {
         )->name('assinaturas.cancelar');
     });
 
+    Route::get('/app', function () {
+
+        if (auth()->check()) {
+            return redirect()->route('dashboard');
+        }
+
+        return redirect()->away(
+            'https://sgasistema.com.br/abrir-sistema'
+        );
+
+    })->name('app.inicio');
+
 
 });
 
 require __DIR__.'/auth.php';
+
+

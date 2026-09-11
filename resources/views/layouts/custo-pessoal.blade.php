@@ -6,6 +6,19 @@
     <meta name="viewport"
           content="width=device-width, initial-scale=1">
 
+<link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
+
+    <meta name="theme-color" content="#0B2A5B">
+
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="SGA Finanças">
+
+<link
+    rel="apple-touch-icon"
+    href="{{ asset('icons/icon-180.png') }}"
+>
+
     <meta name="csrf-token"
           content="{{ csrf_token() }}">
 
