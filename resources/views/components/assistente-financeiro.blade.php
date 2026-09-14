@@ -99,13 +99,33 @@
 }
 
 .sga-assistente-atalhos{
-    display:flex;gap:7px;overflow-x:auto;padding:10px 12px;background:#fff;
-    border-top:1px solid #eef0f3;scrollbar-width:none;flex-shrink:0
+    display:flex;
+    flex-wrap:nowrap;
+    gap:7px;
+    overflow-x:auto;
+    overflow-y:hidden;
+    padding:10px 12px;
+    background:#fff;
+    border-top:1px solid #eef0f3;
+    scrollbar-width:none;
+    flex-shrink:0;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior-x:contain;
+    scroll-behavior:smooth;
 }
+
 .sga-assistente-atalhos::-webkit-scrollbar{display:none}
+
 .sga-assistente-atalho{
-    white-space:nowrap;border:1px solid #dbe3ec;background:#fff;color:#334155;
-    border-radius:999px;padding:7px 10px;font-size:11px;cursor:pointer
+    flex:0 0 auto;
+    white-space:nowrap;
+    border:1px solid #dbe3ec;
+    background:#fff;
+    color:#334155;
+    border-radius:999px;
+    padding:7px 10px;
+    font-size:11px;
+    cursor:pointer;
 }
 .sga-assistente-form{
     display:flex;gap:8px;padding:12px;background:#fff;border-top:1px solid #e5e7eb;
@@ -303,6 +323,18 @@
 
         <button type="button" class="sga-assistente-atalho"
             data-pergunta="Quais são os próximos vencimentos?">Próximos 7 dias</button>
+
+        <button type="button" class="sga-assistente-atalho"
+            data-pergunta="Qual é o meu saldo atual?">Saldo atual</button>
+
+        <button type="button" class="sga-assistente-atalho"
+            data-pergunta="Quanto recebi este mês?">Receitas do mês</button>
+
+        <button type="button" class="sga-assistente-atalho"
+            data-pergunta="Quanto tenho de cartão para pagar este mês?">Cartão do mês</button>
+
+        <button type="button" class="sga-assistente-atalho"
+            data-pergunta="Qual a próxima parcela do empréstimo?">Próxima parcela</button>
 
         <button type="button" class="sga-assistente-atalho"
             data-pergunta="Qual categoria teve o maior gasto?">Maior categoria</button>
