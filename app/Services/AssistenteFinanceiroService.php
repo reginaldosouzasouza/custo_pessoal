@@ -1694,8 +1694,17 @@ class AssistenteFinanceiroService
 
     private function totalCartaoMes(int $userId): string
     {
-        $competencia =
-            now()->format('Y-m');
+        $inicioMes =
+            now()
+                ->copy()
+                ->startOfMonth()
+                ->toDateString();
+
+        $fimMes =
+            now()
+                ->copy()
+                ->endOfMonth()
+                ->toDateString();
 
         $faturas = Fatura::query()
             ->with('cartao')
@@ -1703,15 +1712,18 @@ class AssistenteFinanceiroService
                 'user_id',
                 $userId
             )
-            ->where(
-                'competencia',
-                $competencia
+            ->whereBetween(
+                'data_vencimento',
+                [
+                    $inicioMes,
+                    $fimMes
+                ]
             )
             ->get();
 
         if ($faturas->isEmpty()) {
             return
-                'Você não possui faturas de cartão para '
+                'Você não possui faturas de cartão com vencimento em '
                 . now()->format('m/Y')
                 . '.';
         }
@@ -1757,7 +1769,7 @@ class AssistenteFinanceiroService
 
         if ($linhas->isEmpty()) {
             return
-                'As faturas de cartão de '
+                'As faturas com vencimento em '
                 . now()->format('m/Y')
                 . ' já estão pagas.';
         }
