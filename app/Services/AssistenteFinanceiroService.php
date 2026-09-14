@@ -1283,17 +1283,129 @@ class AssistenteFinanceiroService
                 )
                 ->get();
 
-        $inicioMes =
+        $hoje =
             now()
                 ->copy()
-                ->startOfMonth();
-
-        $fimMes =
-            now()
-                ->copy()
-                ->endOfMonth();
+                ->startOfDay();
 
         foreach ($recorrencias as $recorrencia) {
+
+            /*
+             * Na linguagem comum, "próxima parcela" também pode se referir
+             * a um compromisso recorrente de empréstimo. Para essa consulta,
+             * procuramos o primeiro vencimento futuro de cada recorrência,
+             * mesmo que esteja em um mês posterior ao atual.
+             */
+            if ($tipo === 'proxima_parcela') {
+
+                $encontrouProximo = false;
+
+                for (
+                    $i = 0;
+                    $i <= 36 && !$encontrouProximo;
+                    $i++
+                ) {
+
+                    $inicioPeriodo =
+                        $hoje
+                            ->copy()
+                            ->addMonthsNoOverflow($i)
+                            ->startOfMonth();
+
+                    $fimPeriodo =
+                        $inicioPeriodo
+                            ->copy()
+                            ->endOfMonth();
+
+                    $vencimentos =
+                        $this->vencimentosRecorrenciaNoMes(
+                            $recorrencia,
+                            $inicioPeriodo,
+                            $fimPeriodo
+                        );
+
+                    foreach ($vencimentos as $vencimento) {
+
+                        if (
+                            $vencimento
+                                ->copy()
+                                ->startOfDay()
+                                ->lt($hoje)
+                        ) {
+                            continue;
+                        }
+
+                        /*
+                         * Se a ocorrência já virou uma despesa não cancelada,
+                         * ela já está representada em $itens e não deve ser
+                         * adicionada novamente como recorrência prevista.
+                         */
+                        $jaGerada =
+                            Despesa::query()
+                                ->where(
+                                    'user_id',
+                                    $userId
+                                )
+                                ->where(
+                                    'recorrencia_id',
+                                    $recorrencia->id
+                                )
+                                ->whereDate(
+                                    'data_vencimento',
+                                    $vencimento->toDateString()
+                                )
+                                ->where(
+                                    'situacao',
+                                    '!=',
+                                    'cancelada'
+                                )
+                                ->exists();
+
+                        if ($jaGerada) {
+                            continue;
+                        }
+
+                        $itens->push([
+                            'origem' =>
+                                'recorrencia',
+
+                            'descricao' =>
+                                $recorrencia->descricao,
+
+                            'valor' =>
+                                (float) (
+                                    $recorrencia->valor_padrao
+                                    ?? 0
+                                ),
+
+                            'vencimento' =>
+                                $vencimento,
+
+                            'situacao' =>
+                                'prevista',
+                        ]);
+
+                        $encontrouProximo = true;
+                        break;
+                    }
+                }
+
+                continue;
+            }
+
+            /*
+             * As demais consultas mantêm o comportamento atual: recorrências
+             * do mês corrente.
+             */
+            $inicioMes =
+                now()
+                    ->copy()
+                    ->startOfMonth();
+
+            $fimMes =
+                now()
+                    ->copy()
+                    ->endOfMonth();
 
             $vencimentos =
                 $this->vencimentosRecorrenciaNoMes(
@@ -1344,7 +1456,6 @@ class AssistenteFinanceiroService
                 $tipo,
                 [
                     'vencimento',
-                    'proxima_parcela',
                 ],
                 true
             )
@@ -1380,26 +1491,135 @@ class AssistenteFinanceiroService
 
         if ($tipo === 'proxima_parcela') {
 
-            $item =
-                $itens->first();
+            $hoje =
+                now()
+                    ->copy()
+                    ->startOfDay();
+
+            /*
+             * "Próxima parcela do empréstimo" considera tanto parcelas
+             * pendentes quanto recorrências previstas. Itens pagos ou
+             * cancelados são ignorados, e buscamos somente datas de hoje em
+             * diante.
+             */
+            $proximos =
+                $itens
+                    ->filter(
+                        function ($item) use ($hoje) {
+
+                            if (
+                                !in_array(
+                                    $item['situacao'],
+                                    [
+                                        'pendente',
+                                        'prevista',
+                                    ],
+                                    true
+                                )
+                            ) {
+                                return false;
+                            }
+
+                            if (!$item['vencimento']) {
+                                return false;
+                            }
+
+                            return
+                                $item['vencimento']
+                                    ->copy()
+                                    ->startOfDay()
+                                    ->gte($hoje);
+                        }
+                    )
+                    ->sortBy(
+                        'vencimento'
+                    )
+                    ->values();
+
+            if ($proximos->isEmpty()) {
+
+                return
+                    'Não encontrei parcelas ou compromissos futuros relacionados a "'
+                    . $termo
+                    . '".';
+            }
+
+            $proximaData =
+                $proximos
+                    ->first()['vencimento']
+                    ->copy()
+                    ->startOfDay();
+
+            /*
+             * Se houver mais de um compromisso na data mais próxima, exibimos
+             * todos para não esconder outra obrigação do mesmo empréstimo.
+             */
+            $mesmaData =
+                $proximos
+                    ->filter(
+                        function ($item) use ($proximaData) {
+
+                            return
+                                $item['vencimento']
+                                    ->copy()
+                                    ->startOfDay()
+                                    ->equalTo(
+                                        $proximaData
+                                    );
+                        }
+                    )
+                    ->values();
+
+            $total =
+                (float) $mesmaData
+                    ->sum('valor');
+
+            if ($mesmaData->count() === 1) {
+
+                $item =
+                    $mesmaData
+                        ->first();
+
+                return
+                    'O próximo compromisso relacionado a "'
+                    . $termo
+                    . '" é '
+                    . $item['descricao']
+                    . ', no valor de '
+                    . $this->moeda(
+                        $item['valor']
+                    )
+                    . ', com vencimento em '
+                    . $item['vencimento']
+                        ->format('d/m/Y')
+                    . '.';
+            }
+
+            $linhas =
+                $mesmaData
+                    ->map(
+                        function ($item) {
+
+                            return
+                                '• '
+                                . $item['descricao']
+                                . ' — '
+                                . $this->moeda(
+                                    $item['valor']
+                                );
+                        }
+                    )
+                    ->implode("\n");
 
             return
-                'A próxima parcela relacionada a "'
+                'Seus próximos compromissos relacionados a "'
                 . $termo
-                . '" é '
-                . $item['descricao']
-                . ', no valor de '
-                . $this->moeda(
-                    $item['valor']
-                )
-                . ', com vencimento em '
-                . (
-                    $item['vencimento']
-                        ? $item['vencimento']
-                            ->format('d/m/Y')
-                        : '-'
-                )
-                . '.';
+                . '" vencem em '
+                . $proximaData->format('d/m/Y')
+                . ', totalizando '
+                . $this->moeda($total)
+                . ":\n"
+                . $linhas;
         }
 
         if ($tipo === 'vencimento') {
