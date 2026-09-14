@@ -104,17 +104,34 @@
     gap:7px;
     overflow-x:auto;
     overflow-y:hidden;
-    padding:10px 12px;
+    padding:10px 12px 8px 12px;
     background:#fff;
     border-top:1px solid #eef0f3;
-    scrollbar-width:none;
     flex-shrink:0;
     -webkit-overflow-scrolling:touch;
     overscroll-behavior-x:contain;
     scroll-behavior:smooth;
+    scrollbar-width:thin;
+    scrollbar-color:#cbd5e1 #f1f5f9;
 }
 
-.sga-assistente-atalhos::-webkit-scrollbar{display:none}
+.sga-assistente-atalhos::-webkit-scrollbar{
+    height:6px;
+}
+
+.sga-assistente-atalhos::-webkit-scrollbar-track{
+    background:#f1f5f9;
+    border-radius:999px;
+}
+
+.sga-assistente-atalhos::-webkit-scrollbar-thumb{
+    background:#cbd5e1;
+    border-radius:999px;
+}
+
+.sga-assistente-atalhos::-webkit-scrollbar-thumb:hover{
+    background:#94a3b8;
+}
 
 .sga-assistente-atalho{
     flex:0 0 auto;
