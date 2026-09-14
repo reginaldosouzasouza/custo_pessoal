@@ -663,6 +663,26 @@ class AssistenteFinanceiroService
 
         if (
             $mesAno !== null
+            && (
+                str_contains($texto, 'cartao')
+                || str_contains($texto, 'fatura')
+            )
+        ) {
+
+            [$mes, $ano] =
+                $mesAno;
+
+            return $this->totalCartaoMesEspecifico(
+                $userId,
+                $mes,
+                $ano
+            );
+        }
+
+
+
+        if (
+            $mesAno !== null
             && $this->perguntaSobrePagamentoOuGasto(
                 $texto
             )
@@ -1776,6 +1796,114 @@ class AssistenteFinanceiroService
 
         return
             'Neste mês, você tem '
+            . $this->moeda($totalRestante)
+            . " de cartão para pagar:\n"
+            . $linhas->implode("\n");
+    }
+
+
+
+    private function totalCartaoMesEspecifico(
+    int $userId,
+    int $mes,
+    int $ano
+    ): string {
+
+        $inicioMes =
+            \Illuminate\Support\Carbon::create(
+                $ano,
+                $mes,
+                1
+            )->startOfMonth();
+
+        $fimMes =
+            $inicioMes
+                ->copy()
+                ->endOfMonth();
+
+        $faturas =
+            Fatura::query()
+                ->with('cartao')
+                ->where(
+                    'user_id',
+                    $userId
+                )
+                ->whereBetween(
+                    'data_vencimento',
+                    [
+                        $inicioMes->toDateString(),
+                        $fimMes->toDateString()
+                    ]
+                )
+                ->get();
+
+        $mesFormatado =
+            str_pad(
+                (string) $mes,
+                2,
+                '0',
+                STR_PAD_LEFT
+            )
+            . '/'
+            . $ano;
+
+        if ($faturas->isEmpty()) {
+            return
+                'Você não possui faturas de cartão com vencimento em '
+                . $mesFormatado
+                . '.';
+        }
+
+        $totalRestante = 0.0;
+        $linhas = collect();
+
+        foreach ($faturas as $fatura) {
+
+            $restante = max(
+                0,
+                (float) $fatura->valor_total
+                - (float) $fatura->valor_pago
+            );
+
+            if ($restante <= 0) {
+                continue;
+            }
+
+            $totalRestante +=
+                $restante;
+
+            $nomeCartao =
+                $fatura->cartao?->nome
+                ?? 'Cartão';
+
+            $vencimento =
+                $fatura->data_vencimento
+                    ? $fatura
+                        ->data_vencimento
+                        ->format('d/m/Y')
+                    : '-';
+
+            $linhas->push(
+                '• '
+                . $nomeCartao
+                . ' — '
+                . $this->moeda($restante)
+                . ' — vence em '
+                . $vencimento
+            );
+        }
+
+        if ($linhas->isEmpty()) {
+            return
+                'As faturas com vencimento em '
+                . $mesFormatado
+                . ' já estão pagas.';
+        }
+
+        return
+            'Em '
+            . $mesFormatado
+            . ', você tem '
             . $this->moeda($totalRestante)
             . " de cartão para pagar:\n"
             . $linhas->implode("\n");
