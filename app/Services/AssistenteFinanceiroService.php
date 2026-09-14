@@ -2713,52 +2713,273 @@ class AssistenteFinanceiroService
 
     private function proximosVencimentos(int $userId): string
     {
-        $inicio = now()
-            ->toDateString();
+        $inicio =
+            now()
+                ->copy()
+                ->startOfDay();
 
-        $fim = now()
-            ->addDays(7)
-            ->toDateString();
+        $fim =
+            now()
+                ->copy()
+                ->addDays(7)
+                ->endOfDay();
 
-        $despesas = Despesa::query()
-            ->where('user_id', $userId)
-            ->where('situacao', 'pendente')
-            ->whereBetween(
-                'data_vencimento',
-                [$inicio, $fim]
-            );
+        $itens =
+            collect();
 
-        $parcelas = Parcela::query()
-            ->where('user_id', $userId)
-            ->where('situacao', 'pendente')
-            ->whereBetween(
-                'data_vencimento',
-                [$inicio, $fim]
-            );
 
-        $quantidade =
-            (clone $despesas)->count()
-            + (clone $parcelas)->count();
+        /*
+        |--------------------------------------------------------------------------
+        | DESPESAS PENDENTES
+        |--------------------------------------------------------------------------
+        */
 
-        $total =
-            (float) (clone $despesas)
-                ->sum('valor')
-            + (float) (clone $parcelas)
-                ->sum('valor');
+        $despesas =
+            Despesa::query()
+                ->where(
+                    'user_id',
+                    $userId
+                )
+                ->where(
+                    'situacao',
+                    'pendente'
+                )
+                ->whereBetween(
+                    'data_vencimento',
+                    [
+                        $inicio->toDateString(),
+                        $fim->toDateString()
+                    ]
+                )
+                ->get();
 
-        if ($quantidade === 0) {
-            return
-                'Você não possui vencimentos pendentes nos próximos 7 dias.';
+        foreach ($despesas as $despesa) {
+
+            $itens->push([
+                'origem' =>
+                    'despesa',
+
+                'descricao' =>
+                    $despesa->descricao,
+
+                'valor' =>
+                    (float) $despesa->valor,
+
+                'vencimento' =>
+                    \Illuminate\Support\Carbon::parse(
+                        $despesa->data_vencimento
+                    ),
+            ]);
         }
 
-        return
-            'Nos próximos 7 dias vencem '
-            . $quantidade
-            . ' lançamento'
-            . ($quantidade === 1 ? '' : 's')
-            . ', totalizando '
+
+        /*
+        |--------------------------------------------------------------------------
+        | PARCELAS PENDENTES
+        |--------------------------------------------------------------------------
+        */
+
+        $parcelas =
+            Parcela::query()
+                ->where(
+                    'user_id',
+                    $userId
+                )
+                ->where(
+                    'situacao',
+                    'pendente'
+                )
+                ->whereBetween(
+                    'data_vencimento',
+                    [
+                        $inicio->toDateString(),
+                        $fim->toDateString()
+                    ]
+                )
+                ->get();
+
+        foreach ($parcelas as $parcela) {
+
+            $itens->push([
+                'origem' =>
+                    'parcela',
+
+                'descricao' =>
+                    $parcela->descricao
+                    ?? 'Parcela',
+
+                'valor' =>
+                    (float) $parcela->valor,
+
+                'vencimento' =>
+                    \Illuminate\Support\Carbon::parse(
+                        $parcela->data_vencimento
+                    ),
+            ]);
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | RECORRÊNCIAS PREVISTAS
+        |--------------------------------------------------------------------------
+        */
+
+        $recorrencias =
+            Recorrencia::query()
+                ->where(
+                    'user_id',
+                    $userId
+                )
+                ->where(
+                    'tipo',
+                    'despesa'
+                )
+                ->where(
+                    'ativa',
+                    true
+                )
+                ->whereDate(
+                    'data_inicio',
+                    '<=',
+                    $fim->toDateString()
+                )
+                ->where(
+                    function ($query) use ($inicio) {
+
+                        $query
+                            ->whereNull(
+                                'data_fim'
+                            )
+                            ->orWhereDate(
+                                'data_fim',
+                                '>=',
+                                $inicio->toDateString()
+                            );
+                    }
+                )
+                ->get();
+
+
+        foreach ($recorrencias as $recorrencia) {
+
+            $vencimentos =
+                $this->vencimentosRecorrenciaNoMes(
+                    $recorrencia,
+                    $inicio,
+                    $fim
+                );
+
+            foreach ($vencimentos as $vencimento) {
+
+                /*
+                |--------------------------------------------------------------------------
+                | SE JÁ VIROU DESPESA, NÃO DUPLICA
+                |--------------------------------------------------------------------------
+                */
+
+                $jaGerada =
+                    Despesa::query()
+                        ->where(
+                            'user_id',
+                            $userId
+                        )
+                        ->where(
+                            'recorrencia_id',
+                            $recorrencia->id
+                        )
+                        ->whereDate(
+                            'data_vencimento',
+                            $vencimento
+                                ->toDateString()
+                        )
+                        ->where(
+                            'situacao',
+                            '!=',
+                            'cancelada'
+                        )
+                        ->exists();
+
+                if ($jaGerada) {
+                    continue;
+                }
+
+
+                $itens->push([
+                    'origem' =>
+                        'recorrencia',
+
+                    'descricao' =>
+                        $recorrencia->descricao,
+
+                    'valor' =>
+                        (float) (
+                            $recorrencia->valor_padrao
+                            ?? 0
+                        ),
+
+                    'vencimento' =>
+                        $vencimento,
+                ]);
+            }
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | RESULTADO
+        |--------------------------------------------------------------------------
+        */
+
+        $itens =
+            $itens
+                ->sortBy(
+                    'vencimento'
+                )
+                ->values();
+
+
+        if ($itens->isEmpty()) {
+
+            return
+                'Você não possui vencimentos nos próximos 7 dias.';
+        }
+
+
+        $total =
+            (float) $itens
+                ->sum(
+                    'valor'
+                );
+
+
+        $resposta =
+            'Você possui '
+            . $itens->count()
+            . ' vencimento'
+            . ($itens->count() === 1 ? '' : 's')
+            . ' nos próximos 7 dias, totalizando '
             . $this->moeda($total)
-            . '.';
+            . ":\n";
+
+
+        foreach ($itens as $item) {
+
+            $resposta .=
+                '• '
+                . $item['vencimento']->format('d/m')
+                . ' - '
+                . $item['descricao']
+                . ' - '
+                . $this->moeda(
+                    $item['valor']
+                )
+                . "\n";
+        }
+
+
+        return
+            trim($resposta);
     }
 
     private function maiorCategoriaMes(int $userId): string
