@@ -285,6 +285,40 @@ class AssistenteFinanceiroService
             ) === $userId
         ) {
 
+            if (
+                ($compraCartaoIncompleta['etapa'] ?? null)
+                === 'categoria'
+            ) {
+                $complemento =
+                    $this->resolverComplementoCompraCartao(
+                        $userId,
+                        $perguntaOriginal
+                    );
+
+                if ($complemento !== null) {
+                    $compraCartaoIncompleta['descricao'] =
+                        $complemento['descricao'];
+                    $compraCartaoIncompleta['categoria_id'] =
+                        $complemento['categoria_id'];
+                    $compraCartaoIncompleta['categoria_nome'] =
+                        $complemento['categoria_nome'];
+
+                    session()->forget(
+                        'assistente_compra_cartao_incompleta'
+                    );
+
+                    return $this->montarPreviaCompraCartao(
+                        $compraCartaoIncompleta
+                    );
+                }
+
+                return
+                    "Ainda não consegui identificar uma categoria válida para esta compra.
+
+"
+                    . "Responda, por exemplo: Roupas categoria Lazer.";
+            }
+
             /*
              * Se o usuário desistiu do rascunho anterior e começou
              * um novo lançamento, descartamos a pergunta de cartão
@@ -326,15 +360,34 @@ class AssistenteFinanceiroService
 
             if ($cartaoResposta) {
 
-                session()->forget(
-                    'assistente_compra_cartao_incompleta'
-                );
-
                 $compraCartaoIncompleta['cartao_id'] =
                     $cartaoResposta->id;
 
                 $compraCartaoIncompleta['cartao_nome'] =
                     $cartaoResposta->nome;
+
+                if (empty($compraCartaoIncompleta['categoria_id'])) {
+                    $compraCartaoIncompleta['etapa'] = 'categoria';
+
+                    session([
+                        'assistente_compra_cartao_incompleta' =>
+                            $compraCartaoIncompleta,
+                    ]);
+
+                    return
+                        "Cartão identificado: "
+                        . $cartaoResposta->nome
+                        . ".
+
+"
+                        . "Agora me diga o que você comprou e, se souber, a categoria.
+"
+                        . "Exemplo: Roupas categoria Lazer.";
+                }
+
+                session()->forget(
+                    'assistente_compra_cartao_incompleta'
+                );
 
                 return
                     $this->montarPreviaCompraCartao(
@@ -8575,6 +8628,84 @@ class AssistenteFinanceiroService
     }
 
 
+    private function resolverComplementoCompraCartao(
+        int $userId,
+        string $resposta
+    ): ?array {
+
+        $texto = trim($resposta);
+
+        if ($texto === '') {
+            return null;
+        }
+
+        $texto = preg_replace(
+            '/^(?:eu\s+)?(?:comprei|paguei|gastei)\s+/iu',
+            '',
+            $texto
+        );
+
+        $texto = trim((string) $texto);
+
+        $categoriaInformada = null;
+
+        if (preg_match('/\bcategoria\s+(.+)$/iu', $texto, $partes)) {
+            $categoriaInformada = trim($partes[1]);
+            $texto = trim((string) preg_replace(
+                '/\bcategoria\s+.+$/iu',
+                '',
+                $texto
+            ));
+        }
+
+        $categorias = Categoria::query()
+            ->where('user_id', $userId)
+            ->where('tipo', 'despesa')
+            ->where('ativa', true)
+            ->orderBy('nome')
+            ->get();
+
+        $categoria = null;
+
+        if ($categoriaInformada) {
+            $categoriaNormalizada = $this->normalizar($categoriaInformada);
+
+            $categoria = $categorias->first(function ($item) use ($categoriaNormalizada) {
+                $nome = $this->normalizar((string) $item->nome);
+
+                return $nome === $categoriaNormalizada
+                    || str_contains($nome, $categoriaNormalizada)
+                    || str_contains($categoriaNormalizada, $nome);
+            });
+        }
+
+        $descricao = trim($texto);
+
+        if ($descricao === '') {
+            return null;
+        }
+
+        if (!$categoria) {
+            $categoriaSugerida = $this->sugerirCategoriaLancamento($descricao);
+            $categoria = $this->resolverCategoriaLancamento(
+                $userId,
+                $descricao,
+                $categoriaSugerida
+            );
+        }
+
+        if (!$categoria) {
+            return null;
+        }
+
+        return [
+            'descricao' => ucfirst($descricao),
+            'categoria_id' => $categoria->id,
+            'categoria_nome' => $categoria->nome,
+        ];
+    }
+
+
     private function montarPreviaCompraCartao(
         array $dados
     ): string {
@@ -8590,11 +8721,18 @@ class AssistenteFinanceiroService
             )
         ) {
 
+            $dados['etapa'] = 'categoria';
+
+            session([
+                'assistente_compra_cartao_incompleta' =>
+                    $dados,
+            ]);
+
             return
                 "Identifiquei o cartão, mas ainda falta uma categoria "
                 . "válida para esta compra.\n\n"
-                . "Informe o que você comprou com mais detalhes para "
-                . "que eu consiga classificar corretamente.\n\n"
+                . "Informe o que você comprou e, se souber, a categoria.\n"
+                . "Exemplo: Roupas categoria Lazer.\n\n"
                 . "Nenhuma compra foi gravada.";
         }
 
@@ -8878,6 +9016,9 @@ class AssistenteFinanceiroService
                     'assistente_compra_cartao_incompleta' => [
                         'user_id' =>
                             auth()->id(),
+
+                        'etapa' =>
+                            'cartao',
 
                         'categoria_id' =>
                             $dados['categoria_id']
