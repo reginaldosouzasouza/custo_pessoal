@@ -6844,7 +6844,7 @@ class AssistenteFinanceiroService
 
         $mapa = [
 
-            'Abastecimento' => [
+            'Combustível' => [
                 'abastecimento',
                 'abasteci',
                 'abastecer',
