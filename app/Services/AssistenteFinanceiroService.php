@@ -1887,8 +1887,116 @@ class AssistenteFinanceiroService
             }
 
             /*
-             * As demais consultas mantêm o comportamento atual: recorrências
-             * do mês corrente.
+             * Para consultas de vencimento ou valor de um compromisso
+             * específico, procuramos a próxima ocorrência futura.
+             *
+             * Exemplo:
+             * "Quando vence a internet?"
+             * -> ignora a internet já paga e retorna o próximo vencimento.
+             */
+            if (
+                in_array(
+                    $tipo,
+                    [
+                        'vencimento',
+                        'valor',
+                    ],
+                    true
+                )
+            ) {
+
+                $encontrouProximo = false;
+
+                for (
+                    $i = 0;
+                    $i <= 36 && !$encontrouProximo;
+                    $i++
+                ) {
+
+                    $inicioPeriodo =
+                        $hoje
+                            ->copy()
+                            ->addMonthsNoOverflow($i)
+                            ->startOfMonth();
+
+                    $fimPeriodo =
+                        $inicioPeriodo
+                            ->copy()
+                            ->endOfMonth();
+
+                    $vencimentos =
+                        $this->vencimentosRecorrenciaNoMes(
+                            $recorrencia,
+                            $inicioPeriodo,
+                            $fimPeriodo
+                        );
+
+                    foreach ($vencimentos as $vencimento) {
+
+                        if (
+                            $vencimento
+                                ->copy()
+                                ->startOfDay()
+                                ->lt($hoje)
+                        ) {
+                            continue;
+                        }
+
+                        $jaGerada =
+                            Despesa::query()
+                                ->where(
+                                    'user_id',
+                                    $userId
+                                )
+                                ->where(
+                                    'recorrencia_id',
+                                    $recorrencia->id
+                                )
+                                ->whereDate(
+                                    'data_vencimento',
+                                    $vencimento->toDateString()
+                                )
+                                ->where(
+                                    'situacao',
+                                    '!=',
+                                    'cancelada'
+                                )
+                                ->exists();
+
+                        if ($jaGerada) {
+                            continue;
+                        }
+
+                        $itens->push([
+                            'origem' =>
+                                'recorrencia',
+
+                            'descricao' =>
+                                $recorrencia->descricao,
+
+                            'valor' =>
+                                (float) (
+                                    $recorrencia->valor_padrao
+                                    ?? 0
+                                ),
+
+                            'vencimento' =>
+                                $vencimento,
+
+                            'situacao' =>
+                                'prevista',
+                        ]);
+
+                        $encontrouProximo = true;
+                        break;
+                    }
+                }
+
+                continue;
+            }
+
+            /*
+             * Demais consultas continuam usando o mês corrente.
              */
             $inicioMes =
                 now()
@@ -1944,40 +2052,72 @@ class AssistenteFinanceiroService
          * Para perguntas sobre próxima parcela ou vencimento,
          * priorizamos itens ainda pendentes e mais próximos.
          */
-        if (
-            in_array(
-                $tipo,
-                [
-                    'vencimento',
-                ],
-                true
-            )
-        ) {
+        if ($tipo === 'vencimento') {
 
-            $pendentes =
+            $hoje =
+                now()
+                    ->copy()
+                    ->startOfDay();
+
+            $futurosAbertos =
                 $itens
                     ->filter(
-                        function ($item) {
+                        function ($item) use ($hoje) {
+
+                            if (
+                                !in_array(
+                                    $item['situacao'],
+                                    [
+                                        'pendente',
+                                        'prevista',
+                                    ],
+                                    true
+                                )
+                            ) {
+                                return false;
+                            }
+
+                            if (!$item['vencimento']) {
+                                return false;
+                            }
 
                             return
-                                $item['situacao']
-                                === 'pendente';
+                                $item['vencimento']
+                                    ->copy()
+                                    ->startOfDay()
+                                    ->gte($hoje);
                         }
                     )
-                    ->sortBy(
-                        'vencimento'
-                    )
+                    ->sortBy('vencimento')
                     ->values();
 
-            if ($pendentes->isNotEmpty()) {
+            if ($futurosAbertos->isNotEmpty()) {
+
+                $proximaData =
+                    $futurosAbertos
+                        ->first()['vencimento']
+                        ->copy()
+                        ->startOfDay();
+
                 $itens =
-                    $pendentes;
+                    $futurosAbertos
+                        ->filter(
+                            function ($item) use ($proximaData) {
+
+                                return
+                                    $item['vencimento']
+                                        ->copy()
+                                        ->startOfDay()
+                                        ->equalTo($proximaData);
+                            }
+                        )
+                        ->values();
+
             } else {
+
                 $itens =
                     $itens
-                        ->sortByDesc(
-                            'vencimento'
-                        )
+                        ->sortByDesc('vencimento')
                         ->values();
             }
         }
@@ -2183,26 +2323,88 @@ class AssistenteFinanceiroService
         }
 
         /*
-         * Pergunta de valor: somamos apenas pendentes quando houver,
-         * pois normalmente "quanto é / quanto devo de X" significa
-         * o valor ainda em aberto.
+         * Pergunta de valor: priorizamos o próximo compromisso ainda aberto
+         * (pendente ou previsto). Assim, "Quanto é a conta da internet?"
+         * não usa uma conta já paga quando existe uma próxima recorrência.
          */
-        $pendentes =
+        $hoje =
+            now()
+                ->copy()
+                ->startOfDay();
+
+        $futurosAbertos =
             $itens
                 ->filter(
-                    function ($item) {
+                    function ($item) use ($hoje) {
+
+                        if (
+                            !in_array(
+                                $item['situacao'],
+                                [
+                                    'pendente',
+                                    'prevista',
+                                ],
+                                true
+                            )
+                        ) {
+                            return false;
+                        }
+
+                        if (!$item['vencimento']) {
+                            return false;
+                        }
 
                         return
-                            $item['situacao']
-                            === 'pendente';
+                            $item['vencimento']
+                                ->copy()
+                                ->startOfDay()
+                                ->gte($hoje);
                     }
                 )
+                ->sortBy('vencimento')
                 ->values();
 
-        $base =
-            $pendentes->isNotEmpty()
-                ? $pendentes
-                : $itens;
+        if ($futurosAbertos->isNotEmpty()) {
+
+            $proximaData =
+                $futurosAbertos
+                    ->first()['vencimento']
+                    ->copy()
+                    ->startOfDay();
+
+            $base =
+                $futurosAbertos
+                    ->filter(
+                        function ($item) use ($proximaData) {
+
+                            return
+                                $item['vencimento']
+                                    ->copy()
+                                    ->startOfDay()
+                                    ->equalTo($proximaData);
+                        }
+                    )
+                    ->values();
+
+        } else {
+
+            $pendentes =
+                $itens
+                    ->filter(
+                        function ($item) {
+
+                            return
+                                $item['situacao']
+                                === 'pendente';
+                        }
+                    )
+                    ->values();
+
+            $base =
+                $pendentes->isNotEmpty()
+                    ? $pendentes
+                    : $itens;
+        }
 
         $total =
             (float) $base
