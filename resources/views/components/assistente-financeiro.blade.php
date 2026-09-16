@@ -351,7 +351,7 @@
             data-pergunta="Quanto tenho de cartão para pagar este mês?">Cartão do mês</button>
 
         <button type="button" class="sga-assistente-atalho"
-            data-pergunta="Qual a próxima parcela do empréstimo?">Próxima parcela</button>
+            data-pergunta="Qual a próxima parcela do empréstimo?">Próxima parcela do Empréstimo</button>
 
         <button type="button" class="sga-assistente-atalho"
             data-pergunta="Qual categoria teve o maior gasto?">Maior categoria</button>

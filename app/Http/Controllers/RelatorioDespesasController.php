@@ -191,10 +191,21 @@ class RelatorioDespesasController extends Controller
 
 
             if ($situacao) {
-                $queryDespesas->where(
-                    'situacao',
-                    $situacao
-                );
+
+                if ($situacao === 'a_pagar') {
+
+                    $queryDespesas->where(
+                        'situacao',
+                        'pendente'
+                    );
+
+                } else {
+
+                    $queryDespesas->where(
+                        'situacao',
+                        $situacao
+                    );
+                }
             }
 
 
@@ -280,10 +291,21 @@ class RelatorioDespesasController extends Controller
 
 
             if ($situacao) {
-                $queryParcelas->where(
-                    'situacao',
-                    $situacao
-                );
+
+                if ($situacao === 'a_pagar') {
+
+                    $queryParcelas->where(
+                        'situacao',
+                        'pendente'
+                    );
+
+                } else {
+
+                    $queryParcelas->where(
+                        'situacao',
+                        $situacao
+                    );
+                }
             }
 
 
@@ -503,7 +525,14 @@ class RelatorioDespesasController extends Controller
                         if (
                             $situacao
                             &&
-                            $situacao !== 'prevista'
+                            !in_array(
+                                $situacao,
+                                [
+                                    'prevista',
+                                    'a_pagar',
+                                ],
+                                true
+                            )
                         ) {
                             continue;
                         }
@@ -614,10 +643,23 @@ class RelatorioDespesasController extends Controller
 
             if ($situacao) {
 
-                $queryFaturas->where(
-                    'situacao',
-                    $situacao
-                );
+                if ($situacao === 'a_pagar') {
+
+                    $queryFaturas->whereIn(
+                        'situacao',
+                        [
+                            'aberta',
+                            'fechada',
+                        ]
+                    );
+
+                } else {
+
+                    $queryFaturas->where(
+                        'situacao',
+                        $situacao
+                    );
+                }
             }
 
 
@@ -812,12 +854,10 @@ class RelatorioDespesasController extends Controller
     ) {
         $resultado = collect();
 
-
         $inicioRecorrencia =
             Carbon::parse(
                 $recorrencia->data_inicio
             )->startOfDay();
-
 
         $fimRecorrencia =
             $recorrencia->data_fim
@@ -829,34 +869,70 @@ class RelatorioDespesasController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | SEMANAL
+        | FREQUÊNCIAS BASEADAS EM DIAS
         |--------------------------------------------------------------------------
+        |
+        | A contagem parte sempre da data_inicio da recorrência.
+        | Assim, frequências como "cada 3 dias" continuam corretas mesmo
+        | quando atravessam a mudança de mês.
+        |
         */
 
-        if (
-            $recorrencia->frequencia
-            === 'semanal'
-        ) {
+        $intervaloDias =
+            match ($recorrencia->frequencia) {
+                'diaria' => 1,
+                'cada_3_dias' => 3,
+                'cada_5_dias' => 5,
+                'semanal' => 7,
+                default => null,
+            };
+
+
+        if ($intervaloDias !== null) {
 
             $data =
-                $inicioRecorrencia->copy();
+                $inicioRecorrencia
+                    ->copy();
 
 
-            while (
-                $data->lt($inicioMes)
-            ) {
-                $data->addWeek();
+            if ($data->lt($inicioMes)) {
+
+                $diasDecorridos =
+                    (int) $inicioRecorrencia
+                        ->diffInDays(
+                            $inicioMes
+                        );
+
+                $resto =
+                    $diasDecorridos
+                    % $intervaloDias;
+
+                $data =
+                    $inicioMes
+                        ->copy();
+
+                if ($resto !== 0) {
+
+                    $data->addDays(
+                        $intervaloDias
+                        - $resto
+                    );
+                }
             }
 
 
-            while (
-                $data->lte($fimMes)
-            ) {
+            while ($data->lte($fimMes)) {
 
                 if (
-                    !$fimRecorrencia
-                    ||
-                    $data->lte($fimRecorrencia)
+                    $data->gte($inicioMes)
+                    &&
+                    (
+                        !$fimRecorrencia
+                        ||
+                        $data->lte(
+                            $fimRecorrencia
+                        )
+                    )
                 ) {
 
                     $resultado->push(
@@ -864,8 +940,9 @@ class RelatorioDespesasController extends Controller
                     );
                 }
 
-
-                $data->addWeek();
+                $data->addDays(
+                    $intervaloDias
+                );
             }
 
 
@@ -875,29 +952,18 @@ class RelatorioDespesasController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | OUTRAS FREQUÊNCIAS
+        | FREQUÊNCIAS BASEADAS EM MESES
         |--------------------------------------------------------------------------
         */
 
-        $intervaloMeses = match (
-            $recorrencia->frequencia
-        ) {
-
-            'mensal' =>
-                1,
-
-            'trimestral' =>
-                3,
-
-            'semestral' =>
-                6,
-
-            'anual' =>
-                12,
-
-            default =>
-                null,
-        };
+        $intervaloMeses =
+            match ($recorrencia->frequencia) {
+                'mensal' => 1,
+                'trimestral' => 3,
+                'semestral' => 6,
+                'anual' => 12,
+                default => null,
+            };
 
 
         if (!$intervaloMeses) {
@@ -939,10 +1005,11 @@ class RelatorioDespesasController extends Controller
             );
 
 
-        $dia = min(
-            $dia,
-            $inicioMes->daysInMonth
-        );
+        $dia =
+            min(
+                $dia,
+                $inicioMes->daysInMonth
+            );
 
 
         $vencimento =
@@ -954,6 +1021,19 @@ class RelatorioDespesasController extends Controller
         if (
             $vencimento->lt(
                 $inicioRecorrencia
+            )
+        ) {
+            return $resultado;
+        }
+
+
+        if (
+            $vencimento->lt(
+                $inicioMes
+            )
+            ||
+            $vencimento->gt(
+                $fimMes
             )
         ) {
             return $resultado;

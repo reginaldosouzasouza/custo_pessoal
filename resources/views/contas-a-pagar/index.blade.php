@@ -769,6 +769,13 @@
                     </option>
 
                     <option
+                        value="a_pagar"
+                        @selected($situacaoFiltro === 'a_pagar')
+                    >
+                        A pagar
+                    </option>
+
+                    <option
                         value="pendente"
                         @selected($situacaoFiltro === 'pendente')
                     >

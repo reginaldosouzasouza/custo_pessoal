@@ -45,6 +45,24 @@ class AssistenteFinanceiroService
             'tudo bem',
         ],
 
+        'limite_cartao' => [
+            'quanto tenho de saldo no cartao',
+            'quanto eu tenho de saldo no cartao',
+            'qual o saldo do meu cartao',
+            'qual e o saldo do meu cartao',
+            'quanto tenho disponivel no cartao',
+            'quanto eu tenho disponivel no cartao',
+            'quanto posso gastar no cartao',
+            'quanto eu posso gastar no cartao',
+            'qual meu limite disponivel',
+            'qual e meu limite disponivel',
+            'quanto ainda tenho de limite',
+            'quanto eu ainda tenho de limite',
+            'quanto tenho de limite no cartao',
+            'quanto eu tenho de limite no cartao',
+            'saldo hoje no cartao',
+        ],
+
         'saldo_atual' => [
             'qual e o meu saldo hoje',
             'qual meu saldo hoje',
@@ -218,6 +236,8 @@ class AssistenteFinanceiroService
 
             session()->forget([
                 'assistente_lancamento_despesa',
+                'assistente_lancamento_receita',
+                'assistente_receita_incompleta',
                 'assistente_compra_cartao',
                 'assistente_compra_cartao_incompleta',
                 'assistente_despesa_pendente_incompleta',
@@ -262,7 +282,7 @@ class AssistenteFinanceiroService
             $iniciouNovoLancamento =
                 preg_match(
                     '/^(?:hoje\s+|ontem\s+)?(?:eu\s+)?'
-                    . '(?:paguei|gastei|comprei|abasteci|abastecer|abastecimento|tenho\s+que\s+pagar|preciso\s+pagar|vou\s+pagar|agende|agendar|quero\s+agendar)\b/iu',
+                    . '(?:paguei|gastei|comprei|abasteci|abastecer|abastecimento|recebi|ganhei|entrou|tenho\s+que\s+pagar|preciso\s+pagar|vou\s+pagar|agende|agendar|quero\s+agendar)\b/iu',
                     $perguntaOriginal
                 ) === 1;
 
@@ -343,6 +363,154 @@ class AssistenteFinanceiroService
 
         /*
         |--------------------------------------------------------------------------
+        | CONTINUAÇÃO DE RECEITA INCOMPLETA
+        |--------------------------------------------------------------------------
+        |
+        | O lançamento de receita pode precisar de uma informação adicional,
+        | como descrição/origem, categoria ou conta que recebeu o valor.
+        |
+        */
+
+        $receitaIncompleta =
+            session(
+                'assistente_receita_incompleta'
+            );
+
+        if (
+            is_array(
+                $receitaIncompleta
+            )
+            && (int) (
+                $receitaIncompleta['user_id']
+                ?? 0
+            ) === $userId
+            && !in_array(
+                $texto,
+                [
+                    'cancelar lancamento',
+                    'cancelar receita',
+                ],
+                true
+            )
+        ) {
+
+            $etapa =
+                $receitaIncompleta['etapa']
+                ?? null;
+
+            $dados =
+                $receitaIncompleta['dados']
+                ?? [];
+
+            if ($etapa === 'descricao') {
+
+                $descricaoReceita =
+                    trim(
+                        $perguntaOriginal
+                    );
+
+                if ($descricaoReceita !== '') {
+
+                    $dados['descricao'] =
+                        ucfirst(
+                            $descricaoReceita
+                        );
+
+                    session()->forget(
+                        'assistente_receita_incompleta'
+                    );
+
+                    $dados =
+                        $this->prepararLancamentoReceita(
+                            $userId,
+                            $dados['pergunta_original']
+                                ?? $perguntaOriginal,
+                            $dados
+                        );
+
+                    return
+                        $this->montarPreviaLancamentoReceita(
+                            $userId,
+                            $dados
+                        );
+                }
+            }
+
+            if ($etapa === 'categoria') {
+
+                $categoria =
+                    $this->resolverCategoriaReceitaPorResposta(
+                        $userId,
+                        $perguntaOriginal
+                    );
+
+                if ($categoria) {
+
+                    $dados['categoria_id'] =
+                        $categoria->id;
+
+                    $dados['categoria_nome'] =
+                        $categoria->nome;
+
+                    session()->forget(
+                        'assistente_receita_incompleta'
+                    );
+
+                    return
+                        $this->montarPreviaLancamentoReceita(
+                            $userId,
+                            $dados
+                        );
+                }
+
+                return
+                    "Não consegui identificar a categoria da receita.\n\n"
+                    . "Categorias de receita ativas:\n"
+                    . $this->listarCategoriasReceitaAtivas(
+                        $userId
+                    )
+                    . "\n\nResponda apenas com o nome da categoria.";
+            }
+
+            if ($etapa === 'conta') {
+
+                $conta =
+                    $this->resolverContaPorResposta(
+                        $userId,
+                        $perguntaOriginal
+                    );
+
+                if ($conta) {
+
+                    $dados['conta_id'] =
+                        $conta->id;
+
+                    $dados['conta_nome'] =
+                        $conta->nome;
+
+                    session()->forget(
+                        'assistente_receita_incompleta'
+                    );
+
+                    return
+                        $this->montarPreviaLancamentoReceita(
+                            $userId,
+                            $dados
+                        );
+                }
+
+                return
+                    "Não consegui identificar em qual conta o valor entrou.\n\n"
+                    . "Contas ativas:\n"
+                    . $this->listarContasAtivas(
+                        $userId
+                    )
+                    . "\n\nResponda apenas com o nome da conta.";
+            }
+        }
+
+        /*
+        |--------------------------------------------------------------------------
         | CONFIRMAÇÃO / CANCELAMENTO DE LANÇAMENTO
         |--------------------------------------------------------------------------
         |
@@ -357,6 +525,7 @@ class AssistenteFinanceiroService
                 [
                     'confirmar lancamento',
                     'confirmar despesa',
+                    'confirmar receita',
                 ],
                 true
             )
@@ -373,6 +542,7 @@ class AssistenteFinanceiroService
                     'cancelar lancamento',
                     'cancelar despesa',
                     'cancelar compra',
+                    'cancelar receita',
                 ],
                 true
             )
@@ -380,12 +550,14 @@ class AssistenteFinanceiroService
 
             session()->forget([
                 'assistente_lancamento_despesa',
+                'assistente_lancamento_receita',
+                'assistente_receita_incompleta',
                 'assistente_compra_cartao',
                 'assistente_compra_cartao_incompleta',
             ]);
 
             return
-                'Lançamento cancelado. Nenhuma despesa ou compra foi gravada.';
+                'Lançamento cancelado. Nenhuma despesa, compra ou receita foi gravada.';
         }
 
 
@@ -611,6 +783,28 @@ class AssistenteFinanceiroService
         }
 
 
+        $lancamentoReceita =
+            $this->extrairLancamentoReceita(
+                $perguntaOriginal
+            );
+
+        if ($lancamentoReceita !== null) {
+
+            $lancamentoReceita =
+                $this->prepararLancamentoReceita(
+                    $userId,
+                    $perguntaOriginal,
+                    $lancamentoReceita
+                );
+
+            return
+                $this->montarPreviaLancamentoReceita(
+                    $userId,
+                    $lancamentoReceita
+                );
+        }
+
+
         $lancamentoDespesa =
             $this->extrairLancamentoDespesa(
                 $perguntaOriginal
@@ -679,6 +873,33 @@ class AssistenteFinanceiroService
             );
         }
 
+
+
+        if (
+            $mesAno !== null
+            && (
+                str_contains($texto, 'pendente')
+                || str_contains($texto, 'pendentes')
+                || str_contains($texto, 'a pagar')
+                || str_contains($texto, 'vence')
+                || str_contains($texto, 'vencem')
+                || str_contains($texto, 'vencimento')
+                || str_contains($texto, 'vencimentos')
+                || str_contains($texto, 'contas')
+            )
+            && !str_contains($texto, 'cartao')
+            && !str_contains($texto, 'fatura')
+        ) {
+
+            [$mes, $ano] =
+                $mesAno;
+
+            return $this->pendenciasMesEspecifico(
+                $userId,
+                $mes,
+                $ano
+            );
+        }
 
 
         if (
@@ -892,6 +1113,9 @@ class AssistenteFinanceiroService
                     $primeiroNome
                 ),
 
+            'limite_cartao' =>
+                $this->limiteCartao($userId),
+
             'saldo_atual' =>
                 $this->saldoAtual($userId),
 
@@ -968,6 +1192,133 @@ class AssistenteFinanceiroService
     }
 
 
+    private function limiteCartao(int $userId): string
+    {
+        $cartoes =
+            Cartao::query()
+                ->where('user_id', $userId)
+                ->where('ativo', true)
+                ->orderBy('nome')
+                ->get();
+
+        if ($cartoes->isEmpty()) {
+            return
+                "Você ainda não possui cartões cadastrados.\n\n"
+                . "Se utiliza cartão de crédito, cadastre-o para acompanhar "
+                . "limite, compras, parcelas e faturas.";
+        }
+
+        $linhas =
+            $cartoes
+                ->map(
+                    function ($cartao) {
+
+                        $limiteTotal =
+                            (float) (
+                                $cartao->limite_total
+                                ?? $cartao->limite
+                                ?? 0
+                            );
+
+                        /*
+                         * O limite utilizado pode não existir como coluna física
+                         * no cartão. Calculamos a partir das faturas em aberto
+                         * para manter a resposta coerente com os dados reais.
+                         */
+                        $utilizado =
+                            (float) Fatura::query()
+                                ->where(
+                                    'cartao_id',
+                                    $cartao->id
+                                )
+                                ->where(
+                                    'situacao',
+                                    '!=',
+                                    'paga'
+                                )
+                                ->sum(
+                                    \Illuminate\Support\Facades\DB::raw(
+                                        'GREATEST(valor_total - valor_pago, 0)'
+                                    )
+                                );
+
+                        $disponivel =
+                            max(
+                                0,
+                                $limiteTotal
+                                - $utilizado
+                            );
+
+                        return
+                            '• '
+                            . $cartao->nome
+                            . ' — limite total '
+                            . $this->moeda($limiteTotal)
+                            . ' — utilizado '
+                            . $this->moeda($utilizado)
+                            . ' — disponível '
+                            . $this->moeda($disponivel);
+                    }
+                );
+
+        if ($cartoes->count() === 1) {
+
+            $cartao =
+                $cartoes->first();
+
+            $limiteTotal =
+                (float) (
+                    $cartao->limite_total
+                    ?? $cartao->limite
+                    ?? 0
+                );
+
+            $utilizado =
+                (float) Fatura::query()
+                    ->where(
+                        'cartao_id',
+                        $cartao->id
+                    )
+                    ->where(
+                        'situacao',
+                        '!=',
+                        'paga'
+                    )
+                    ->sum(
+                        \Illuminate\Support\Facades\DB::raw(
+                            'GREATEST(valor_total - valor_pago, 0)'
+                        )
+                    );
+
+            $disponivel =
+                max(
+                    0,
+                    $limiteTotal
+                    - $utilizado
+                );
+
+            return
+                'Seu cartão '
+                . $cartao->nome
+                . ' possui '
+                . $this->moeda($disponivel)
+                . " de limite disponível.\n"
+                . '• Limite total: '
+                . $this->moeda($limiteTotal)
+                . "\n"
+                . '• Limite utilizado: '
+                . $this->moeda($utilizado)
+                . "\n"
+                . '• Limite disponível: '
+                . $this->moeda($disponivel);
+        }
+
+        return
+            "Seus cartões possuem os seguintes limites disponíveis:\n"
+            . $linhas->implode("\n");
+    }
+
+
     private function saldoAtual(int $userId): string
     {
         $contas = Conta::query()
@@ -1035,7 +1386,9 @@ class AssistenteFinanceiroService
 
         if ($contas->isEmpty()) {
             return
-                'Você não possui contas ou carteiras ativas cadastradas.';
+                "Você ainda não possui contas ou carteiras ativas cadastradas.\n\n"
+                . "Cadastre pelo menos uma conta bancária ou carteira para que eu consiga "
+                . "calcular e acompanhar o seu saldo atual.";
         }
 
         $saldoAtual =
@@ -1934,6 +2287,19 @@ class AssistenteFinanceiroService
 
     private function totalCartaoMes(int $userId): string
     {
+        $temCartaoAtivo =
+            Cartao::query()
+                ->where('user_id', $userId)
+                ->where('ativo', true)
+                ->exists();
+
+        if (!$temCartaoAtivo) {
+            return
+                "Você ainda não possui cartões cadastrados.\n\n"
+                . "Se utiliza cartão de crédito, cadastre-o para acompanhar compras, "
+                . "parcelas e faturas.";
+        }
+
         $inicioMes =
             now()
                 ->copy()
@@ -1958,6 +2324,11 @@ class AssistenteFinanceiroService
                     $inicioMes,
                     $fimMes
                 ]
+            )
+            ->where(
+                'situacao',
+                '!=',
+                'paga'
             )
             ->get();
 
@@ -2029,6 +2400,19 @@ class AssistenteFinanceiroService
     int $ano
     ): string {
 
+        $temCartaoAtivo =
+            Cartao::query()
+                ->where('user_id', $userId)
+                ->where('ativo', true)
+                ->exists();
+
+        if (!$temCartaoAtivo) {
+            return
+                "Você ainda não possui cartões cadastrados.\n\n"
+                . "Se utiliza cartão de crédito, cadastre-o para acompanhar compras, "
+                . "parcelas e faturas.";
+        }
+
         $inicioMes =
             \Illuminate\Support\Carbon::create(
                 $ano,
@@ -2054,6 +2438,11 @@ class AssistenteFinanceiroService
                         $inicioMes->toDateString(),
                         $fimMes->toDateString()
                     ]
+                )
+                ->where(
+                    'situacao',
+                    '!=',
+                    'paga'
                 )
                 ->get();
 
@@ -2199,6 +2588,26 @@ class AssistenteFinanceiroService
         }
 
         if ($itens->isEmpty()) {
+
+            $temCompromissos =
+                Despesa::query()
+                    ->where('user_id', $userId)
+                    ->exists()
+                || Parcela::query()
+                    ->where('user_id', $userId)
+                    ->exists()
+                || Recorrencia::query()
+                    ->where('user_id', $userId)
+                    ->where('tipo', 'despesa')
+                    ->exists();
+
+            if (!$temCompromissos) {
+                return
+                    "Ainda não encontrei contas, despesas, parcelas ou recorrências cadastradas.\n\n"
+                    . "Quando você começar a registrar seus compromissos, eu conseguirei "
+                    . "verificar o que vence em uma data específica.";
+            }
+
             return
                 'Você não possui pagamentos pendentes com vencimento em '
                 . $data->format('d/m/Y')
@@ -2318,8 +2727,66 @@ class AssistenteFinanceiroService
             ->sum('valor');
 
         if ($total <= 0) {
+
+            $pendentes =
+                Receita::query()
+                    ->where('user_id', $userId)
+                    ->where('situacao', 'pendente')
+                    ->whereBetween(
+                        'data_prevista',
+                        [$inicio, $fim]
+                    )
+                    ->orderBy('data_prevista')
+                    ->get();
+
+            if ($pendentes->isNotEmpty()) {
+
+                $totalPendente =
+                    (float) $pendentes->sum('valor');
+
+                $primeira =
+                    $pendentes->first();
+
+                if ($pendentes->count() === 1) {
+
+                    $resposta =
+                        'Você ainda não possui receitas recebidas neste mês. '
+                        . 'Encontrei 1 receita pendente de '
+                        . $this->moeda($totalPendente);
+
+                    if ($primeira->data_prevista) {
+                        $resposta .=
+                            ', com previsão para '
+                            . $primeira->data_prevista->format('d/m/Y');
+                    }
+
+                    return $resposta . '.';
+                }
+
+                return
+                    'Você ainda não possui receitas recebidas neste mês. '
+                    . 'Encontrei '
+                    . $pendentes->count()
+                    . ' receitas pendentes, totalizando '
+                    . $this->moeda($totalPendente)
+                    . '.';
+            }
+
+            $temAlgumaReceita =
+                Receita::query()
+                    ->where('user_id', $userId)
+                    ->exists();
+
+            if (!$temAlgumaReceita) {
+                return
+                    "Ainda não encontrei receitas cadastradas.\n\n"
+                    . "Quando você começar a registrar suas entradas, eu conseguirei "
+                    . "acompanhar quanto entrou no mês.";
+            }
+
             return
-                'Neste mês, você ainda não possui receitas recebidas.';}
+                'Neste mês, você ainda não possui receitas recebidas.';
+        }
 
         return
             'Neste mês, você recebeu '
@@ -2359,6 +2826,241 @@ class AssistenteFinanceiroService
             . ' receita'
             . ($quantidade === 1 ? '' : 's')
             . '.';
+    }
+
+
+    private function pendenciasMesEspecifico(
+        int $userId,
+        int $mes,
+        int $ano
+    ): string {
+
+        $inicio =
+            \Illuminate\Support\Carbon::create(
+                $ano,
+                $mes,
+                1
+            )->startOfMonth();
+
+        $fim =
+            $inicio
+                ->copy()
+                ->endOfMonth();
+
+        $itens =
+            collect();
+
+        $despesas =
+            Despesa::query()
+                ->where('user_id', $userId)
+                ->where('situacao', 'pendente')
+                ->whereBetween(
+                    'data_vencimento',
+                    [
+                        $inicio->toDateString(),
+                        $fim->toDateString(),
+                    ]
+                )
+                ->get();
+
+        foreach ($despesas as $despesa) {
+            $itens->push([
+                'descricao' => $despesa->descricao,
+                'valor' => (float) $despesa->valor,
+                'vencimento' => $despesa->data_vencimento,
+            ]);
+        }
+
+        $parcelas =
+            Parcela::query()
+                ->with('parcelamento')
+                ->where('user_id', $userId)
+                ->where('situacao', 'pendente')
+                ->whereBetween(
+                    'data_vencimento',
+                    [
+                        $inicio->toDateString(),
+                        $fim->toDateString(),
+                    ]
+                )
+                ->get();
+
+        foreach ($parcelas as $parcela) {
+
+            $descricao =
+                $parcela->parcelamento?->descricao
+                ?? 'Parcelamento';
+
+            $descricao .=
+                ' - '
+                . $parcela->numero_parcela
+                . '/'
+                . $parcela->total_parcelas;
+
+            $itens->push([
+                'descricao' => $descricao,
+                'valor' => (float) $parcela->valor,
+                'vencimento' => $parcela->data_vencimento,
+            ]);
+        }
+
+        $recorrencias =
+            Recorrencia::query()
+                ->where('user_id', $userId)
+                ->where('tipo', 'despesa')
+                ->where('ativa', true)
+                ->whereDate(
+                    'data_inicio',
+                    '<=',
+                    $fim->toDateString()
+                )
+                ->where(
+                    function ($query) use ($inicio) {
+                        $query
+                            ->whereNull('data_fim')
+                            ->orWhereDate(
+                                'data_fim',
+                                '>=',
+                                $inicio->toDateString()
+                            );
+                    }
+                )
+                ->get();
+
+        foreach ($recorrencias as $recorrencia) {
+
+            $vencimentos =
+                $this->vencimentosRecorrenciaNoMes(
+                    $recorrencia,
+                    $inicio,
+                    $fim
+                );
+
+            foreach ($vencimentos as $vencimento) {
+
+                $jaGerada =
+                    Despesa::query()
+                        ->where('user_id', $userId)
+                        ->where('recorrencia_id', $recorrencia->id)
+                        ->whereDate(
+                            'data_vencimento',
+                            $vencimento->toDateString()
+                        )
+                        ->where(
+                            'situacao',
+                            '!=',
+                            'cancelada'
+                        )
+                        ->exists();
+
+                if ($jaGerada) {
+                    continue;
+                }
+
+                $itens->push([
+                    'descricao' => $recorrencia->descricao,
+                    'valor' => (float) (
+                        $recorrencia->valor_padrao
+                        ?? 0
+                    ),
+                    'vencimento' => $vencimento,
+                ]);
+            }
+        }
+
+        $itens =
+            $itens
+                ->sortBy('vencimento')
+                ->values();
+
+        $mesFormatado =
+            str_pad(
+                (string) $mes,
+                2,
+                '0',
+                STR_PAD_LEFT
+            )
+            . '/'
+            . $ano;
+
+        if ($itens->isEmpty()) {
+
+            $temCompromissos =
+                Despesa::query()
+                    ->where('user_id', $userId)
+                    ->exists()
+                || Parcela::query()
+                    ->where('user_id', $userId)
+                    ->exists()
+                || Recorrencia::query()
+                    ->where('user_id', $userId)
+                    ->where('tipo', 'despesa')
+                    ->exists();
+
+            if (!$temCompromissos) {
+                return
+                    "Ainda não encontrei contas, despesas, parcelas ou recorrências cadastradas.\n\n"
+                    . "Quando você começar a registrar seus compromissos, eu conseguirei "
+                    . "consultar o que está pendente em cada mês.";
+            }
+
+            return
+                'Você não possui contas ou parcelas pendentes com vencimento em '
+                . $mesFormatado
+                . '.';
+        }
+
+        $total =
+            (float) $itens->sum('valor');
+
+        $linhas =
+            $itens
+                ->take(10)
+                ->map(
+                    function ($item) {
+
+                        $data =
+                            $item['vencimento']
+                                ? $item['vencimento']->format('d/m/Y')
+                                : '-';
+
+                        return
+                            '• '
+                            . $item['descricao']
+                            . ' — '
+                            . $this->moeda(
+                                (float) $item['valor']
+                            )
+                            . ' — vence em '
+                            . $data;
+                    }
+                )
+                ->implode("\n");
+
+        $resposta =
+            'Em '
+            . $mesFormatado
+            . ', você possui '
+            . $itens->count()
+            . ' compromisso'
+            . ($itens->count() === 1 ? '' : 's')
+            . ' pendente'
+            . ($itens->count() === 1 ? '' : 's')
+            . ', totalizando '
+            . $this->moeda($total)
+            . ":\n"
+            . $linhas;
+
+        if ($itens->count() > 10) {
+            $resposta .=
+                "\n• E mais "
+                . ($itens->count() - 10)
+                . ' compromisso'
+                . (($itens->count() - 10) === 1 ? '' : 's')
+                . '.';
+        }
+
+        return $resposta;
     }
 
 
@@ -2423,6 +3125,27 @@ class AssistenteFinanceiroService
             + $parcelas;
 
         if ($total <= 0) {
+
+            $temDespesa =
+                Despesa::query()
+                    ->where('user_id', $userId)
+                    ->exists();
+
+            $temParcela =
+                Parcela::query()
+                    ->where('user_id', $userId)
+                    ->exists();
+
+            if (
+                !$temDespesa
+                && !$temParcela
+            ) {
+                return
+                    "Ainda não encontrei despesas ou parcelas cadastradas.\n\n"
+                    . "Quando você começar a registrar seus gastos, eu conseguirei "
+                    . "consultar quanto foi pago em cada mês.";
+            }
+
             return
                 'Você não possui pagamentos registrados em '
                 . str_pad(
@@ -2576,6 +3299,26 @@ class AssistenteFinanceiroService
 
         if ($itens->isEmpty()) {
 
+            $temDespesa =
+                Despesa::query()
+                    ->where('user_id', $userId)
+                    ->exists();
+
+            $temParcela =
+                Parcela::query()
+                    ->where('user_id', $userId)
+                    ->exists();
+
+            if (
+                !$temDespesa
+                && !$temParcela
+            ) {
+                return
+                    "Ainda não encontrei despesas ou parcelas cadastradas.\n\n"
+                    . "Quando você começar a registrar seus gastos, eu conseguirei "
+                    . "listar os pagamentos feitos em cada mês.";
+            }
+
             return
                 'Você não possui pagamentos registrados em '
                 . $mesFormatado
@@ -2669,6 +3412,46 @@ class AssistenteFinanceiroService
     private function extrairMesAnoDaPergunta(
         string $texto
     ): ?array {
+
+        /*
+         * Expressões relativas de mês.
+         *
+         * O texto já chega normalizado, portanto:
+         * "próximo mês" -> "proximo mes"
+         */
+        if (
+            preg_match(
+                '/\b(?:proximo\s+mes|mes\s+que\s+vem|mes\s+seguinte)\b/',
+                $texto
+            )
+        ) {
+            $proximoMes =
+                now()
+                    ->copy()
+                    ->addMonthNoOverflow();
+
+            return [
+                (int) $proximoMes->month,
+                (int) $proximoMes->year,
+            ];
+        }
+
+        if (
+            preg_match(
+                '/\b(?:mes\s+passado|mes\s+anterior)\b/',
+                $texto
+            )
+        ) {
+            $mesAnterior =
+                now()
+                    ->copy()
+                    ->subMonthNoOverflow();
+
+            return [
+                (int) $mesAnterior->month,
+                (int) $mesAnterior->year,
+            ];
+        }
 
         $meses = [
             'janeiro' => 1,
@@ -2777,11 +3560,38 @@ class AssistenteFinanceiroService
             )
             ->sum('valor');
 
+        $total =
+            $despesas + $parcelas;
+
+        if ($total <= 0) {
+
+            $temDespesa =
+                Despesa::query()
+                    ->where('user_id', $userId)
+                    ->exists();
+
+            $temParcela =
+                Parcela::query()
+                    ->where('user_id', $userId)
+                    ->exists();
+
+            if (
+                !$temDespesa
+                && !$temParcela
+            ) {
+                return
+                    "Ainda não encontrei despesas ou parcelas cadastradas.\n\n"
+                    . "Quando você começar a registrar seus gastos, eu conseguirei "
+                    . "acompanhar quanto foi pago no mês.";
+            }
+
+            return
+                'Neste mês, você ainda não possui despesas ou parcelas pagas.';
+        }
+
         return
             'Neste mês, você já pagou '
-            . $this->moeda(
-                $despesas + $parcelas
-            )
+            . $this->moeda($total)
             . ' em despesas e parcelas.';
     }
 
@@ -2886,8 +3696,28 @@ class AssistenteFinanceiroService
             ->values();
 
         if ($itens->isEmpty()) {
+
+            $temCompromissos =
+                Despesa::query()
+                    ->where('user_id', $userId)
+                    ->exists()
+                || Parcela::query()
+                    ->where('user_id', $userId)
+                    ->exists()
+                || Recorrencia::query()
+                    ->where('user_id', $userId)
+                    ->where('tipo', 'despesa')
+                    ->exists();
+
+            if (!$temCompromissos) {
+                return
+                    "Ainda não encontrei contas, despesas, parcelas ou recorrências cadastradas.\n\n"
+                    . "Quando você começar a registrar seus compromissos, eu conseguirei "
+                    . "mostrar o que está pendente para pagamento.";
+            }
+
             return
-                'Você não possui despesas ou parcelas pendentes.';
+                'Você não possui despesas ou parcelas pendentes já lançadas.';
         }
 
         $total =
@@ -2946,23 +3776,31 @@ class AssistenteFinanceiroService
     private function despesasAtrasadas(int $userId): string
     {
         $hoje =
-            now()->toDateString();
+            now()->copy()->startOfDay();
 
         $itens = collect();
 
+        /*
+        |--------------------------------------------------------------------------
+        | DESPESAS VENCIDAS
+        |--------------------------------------------------------------------------
+        */
         $despesas = Despesa::query()
             ->where('user_id', $userId)
             ->where('situacao', 'pendente')
             ->whereDate(
                 'data_vencimento',
                 '<',
-                $hoje
+                $hoje->toDateString()
             )
             ->orderBy('data_vencimento')
             ->get();
 
         foreach ($despesas as $despesa) {
             $itens->push([
+                'origem' =>
+                    'despesa',
+
                 'descricao' =>
                     $despesa->descricao,
 
@@ -2974,6 +3812,11 @@ class AssistenteFinanceiroService
             ]);
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | PARCELAS VENCIDAS
+        |--------------------------------------------------------------------------
+        */
         $parcelas = Parcela::query()
             ->with('parcelamento')
             ->where('user_id', $userId)
@@ -2981,7 +3824,7 @@ class AssistenteFinanceiroService
             ->whereDate(
                 'data_vencimento',
                 '<',
-                $hoje
+                $hoje->toDateString()
             )
             ->orderBy('data_vencimento')
             ->get();
@@ -2998,6 +3841,9 @@ class AssistenteFinanceiroService
                 . $parcela->total_parcelas;
 
             $itens->push([
+                'origem' =>
+                    'parcela',
+
                 'descricao' =>
                     $descricao,
 
@@ -3009,11 +3855,166 @@ class AssistenteFinanceiroService
             ]);
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | RECORRÊNCIAS VENCIDAS
+        |--------------------------------------------------------------------------
+        |
+        | A tela de Contas a Pagar considera também recorrências.
+        | Para manter o Assistente coerente com a tela, incluímos todas as
+        | ocorrências vencidas até ontem, sem duplicar as que já viraram
+        | despesas no banco.
+        |
+        */
+        $recorrencias = Recorrencia::query()
+            ->where('user_id', $userId)
+            ->where('tipo', 'despesa')
+            ->where('ativa', true)
+            ->whereDate(
+                'data_inicio',
+                '<',
+                $hoje->toDateString()
+            )
+            ->where(
+                function ($query) use ($hoje) {
+                    $query
+                        ->whereNull('data_fim')
+                        ->orWhereDate(
+                            'data_fim',
+                            '>=',
+                            $hoje->copy()->subYear()->toDateString()
+                        );
+                }
+            )
+            ->get();
+
+        foreach ($recorrencias as $recorrencia) {
+
+            $inicioBusca =
+                \Illuminate\Support\Carbon::parse(
+                    $recorrencia->data_inicio
+                )->startOfMonth();
+
+            $fimBusca =
+                $hoje
+                    ->copy()
+                    ->subDay()
+                    ->endOfMonth();
+
+            $cursorMes =
+                $inicioBusca->copy();
+
+            while (
+                $cursorMes->lte($fimBusca)
+            ) {
+
+                $inicioMes =
+                    $cursorMes
+                        ->copy()
+                        ->startOfMonth();
+
+                $fimMes =
+                    $cursorMes
+                        ->copy()
+                        ->endOfMonth();
+
+                $vencimentos =
+                    $this->vencimentosRecorrenciaNoMes(
+                        $recorrencia,
+                        $inicioMes,
+                        $fimMes
+                    );
+
+                foreach ($vencimentos as $vencimento) {
+
+                    if (
+                        $vencimento
+                            ->copy()
+                            ->startOfDay()
+                            ->gte($hoje)
+                    ) {
+                        continue;
+                    }
+
+                    /*
+                     * Se esta ocorrência já foi gerada como despesa,
+                     * ela já está representada em $despesas e não deve
+                     * ser somada novamente.
+                     */
+                    $jaGerada =
+                        Despesa::query()
+                            ->where(
+                                'user_id',
+                                $userId
+                            )
+                            ->where(
+                                'recorrencia_id',
+                                $recorrencia->id
+                            )
+                            ->whereDate(
+                                'data_vencimento',
+                                $vencimento->toDateString()
+                            )
+                            ->where(
+                                'situacao',
+                                '!=',
+                                'cancelada'
+                            )
+                            ->exists();
+
+                    if ($jaGerada) {
+                        continue;
+                    }
+
+                    $itens->push([
+                        'origem' =>
+                            'recorrencia',
+
+                        'descricao' =>
+                            $recorrencia->descricao,
+
+                        'valor' =>
+                            (float) (
+                                $recorrencia->valor_padrao
+                                ?? 0
+                            ),
+
+                        'vencimento' =>
+                            $vencimento,
+                    ]);
+                }
+
+                $cursorMes
+                    ->addMonthNoOverflow()
+                    ->startOfMonth();
+            }
+        }
+
         $itens = $itens
             ->sortBy('vencimento')
             ->values();
 
         if ($itens->isEmpty()) {
+
+            $temCompromissos =
+                Despesa::query()
+                    ->where('user_id', $userId)
+                    ->exists()
+                || Parcela::query()
+                    ->where('user_id', $userId)
+                    ->exists()
+                || Recorrencia::query()
+                    ->where('user_id', $userId)
+                    ->where('tipo', 'despesa')
+                    ->exists();
+
+            if (!$temCompromissos) {
+                return
+                    "Ainda não encontrei compromissos financeiros cadastrados para verificar atrasos.\n\n"
+                    . "Depois que você cadastrar suas contas, parcelas ou despesas recorrentes, "
+                    . "eu conseguirei acompanhar o que estiver vencido.";
+            }
+
             return
                 'Você não possui despesas atrasadas.';
         }
@@ -3070,7 +4071,6 @@ class AssistenteFinanceiroService
         return $resposta;
     }
 
-
     private function proximosVencimentos(int $userId): string
     {
         $inicio =
@@ -3078,10 +4078,14 @@ class AssistenteFinanceiroService
                 ->copy()
                 ->startOfDay();
 
+        /*
+         * "Próximos 7 dias" considera hoje + os próximos 6 dias,
+         * totalizando exatamente 7 datas.
+         */
         $fim =
             now()
                 ->copy()
-                ->addDays(7)
+                ->addDays(6)
                 ->endOfDay();
 
         $itens =
@@ -3291,8 +4295,37 @@ class AssistenteFinanceiroService
         |--------------------------------------------------------------------------
         */
 
+        /*
+        |--------------------------------------------------------------------------
+        | FILTRO FINAL DO PERÍODO
+        |--------------------------------------------------------------------------
+        |
+        | Segurança adicional para garantir que nenhuma recorrência ou outro
+        | lançamento fora da janela de hoje até +6 dias apareça na resposta.
+        |
+        */
         $itens =
             $itens
+                ->filter(
+                    function ($item) use ($inicio, $fim) {
+
+                        if (empty($item['vencimento'])) {
+                            return false;
+                        }
+
+                        $vencimento =
+                            $item['vencimento']
+                            instanceof \Illuminate\Support\Carbon
+                                ? $item['vencimento']->copy()
+                                : \Illuminate\Support\Carbon::parse(
+                                    $item['vencimento']
+                                );
+
+                        return
+                            $vencimento->gte($inicio)
+                            && $vencimento->lte($fim);
+                    }
+                )
                 ->sortBy(
                     'vencimento'
                 )
@@ -3300,6 +4333,25 @@ class AssistenteFinanceiroService
 
 
         if ($itens->isEmpty()) {
+
+            $temCompromissos =
+                Despesa::query()
+                    ->where('user_id', $userId)
+                    ->exists()
+                || Parcela::query()
+                    ->where('user_id', $userId)
+                    ->exists()
+                || Recorrencia::query()
+                    ->where('user_id', $userId)
+                    ->where('tipo', 'despesa')
+                    ->exists();
+
+            if (!$temCompromissos) {
+                return
+                    "Ainda não encontrei contas, parcelas ou despesas recorrentes cadastradas.\n\n"
+                    . "Quando você registrar seus compromissos, eu conseguirei mostrar "
+                    . "os próximos vencimentos.";
+            }
 
             return
                 'Você não possui vencimentos nos próximos 7 dias.';
@@ -3444,6 +4496,212 @@ class AssistenteFinanceiroService
     private function confirmarLancamentoPendente(
         int $userId
     ): string {
+
+        /*
+         * Receita recebida por linguagem natural.
+         */
+        $rascunhoReceita =
+            session(
+                'assistente_lancamento_receita'
+            );
+
+        if (
+            is_array(
+                $rascunhoReceita
+            )
+        ) {
+
+            if (
+                (int) (
+                    $rascunhoReceita['user_id']
+                    ?? 0
+                )
+                !== $userId
+            ) {
+
+                session()->forget(
+                    'assistente_lancamento_receita'
+                );
+
+                return
+                    'Não foi possível confirmar esta receita. '
+                    . 'Faça o lançamento novamente.';
+            }
+
+            try {
+
+                $receita =
+                    \Illuminate\Support\Facades\DB::transaction(
+                        function () use (
+                            $userId,
+                            $rascunhoReceita
+                        ) {
+
+                            Categoria::query()
+                                ->where(
+                                    'id',
+                                    $rascunhoReceita['categoria_id']
+                                )
+                                ->where(
+                                    'user_id',
+                                    $userId
+                                )
+                                ->where(
+                                    'tipo',
+                                    'receita'
+                                )
+                                ->where(
+                                    'ativa',
+                                    true
+                                )
+                                ->firstOrFail();
+
+                            Conta::query()
+                                ->where(
+                                    'id',
+                                    $rascunhoReceita['conta_id']
+                                )
+                                ->where(
+                                    'user_id',
+                                    $userId
+                                )
+                                ->where(
+                                    'ativa',
+                                    true
+                                )
+                                ->firstOrFail();
+
+                            if (
+                                !empty(
+                                    $rascunhoReceita['forma_pagamento_id']
+                                )
+                            ) {
+
+                                FormaPagamento::query()
+                                    ->where(
+                                        'id',
+                                        $rascunhoReceita['forma_pagamento_id']
+                                    )
+                                    ->where(
+                                        'ativa',
+                                        true
+                                    )
+                                    ->whereIn(
+                                        'tipo',
+                                        [
+                                            'recebimento',
+                                            'ambos',
+                                        ]
+                                    )
+                                    ->firstOrFail();
+                            }
+
+                            $dataRecebimento =
+                                $rascunhoReceita['data']
+                                ?? now()->toDateString();
+
+                            $receita =
+                                Receita::create([
+                                    'user_id' =>
+                                        $userId,
+
+                                    'categoria_id' =>
+                                        $rascunhoReceita['categoria_id'],
+
+                                    'conta_id' =>
+                                        $rascunhoReceita['conta_id'],
+
+                                    'forma_pagamento_id' =>
+                                        $rascunhoReceita['forma_pagamento_id']
+                                        ?? null,
+
+                                    'descricao' =>
+                                        $rascunhoReceita['descricao'],
+
+                                    'valor' =>
+                                        $rascunhoReceita['valor'],
+
+                                    'data_prevista' =>
+                                        $dataRecebimento,
+
+                                    'data_recebimento' =>
+                                        $dataRecebimento,
+
+                                    'situacao' =>
+                                        'recebida',
+
+                                    'recebida_em' =>
+                                        now(),
+
+                                    'observacao' =>
+                                        'Lançada pelo Assistente SGA Finanças',
+                                ]);
+
+                            MovimentacaoConta::create([
+                                'user_id' =>
+                                    $userId,
+
+                                'conta_id' =>
+                                    $receita->conta_id,
+
+                                'tipo' =>
+                                    'entrada',
+
+                                'origem_tipo' =>
+                                    'receita',
+
+                                'origem_id' =>
+                                    $receita->id,
+
+                                'valor' =>
+                                    $receita->valor,
+
+                                'data_movimentacao' =>
+                                    $receita->data_recebimento,
+
+                                'descricao' =>
+                                    'Receita: '
+                                    . $receita->descricao,
+
+                                'estornada' =>
+                                    false,
+                            ]);
+
+                            return $receita;
+                        }
+                    );
+
+                session()->forget([
+                    'assistente_lancamento_receita',
+                    'assistente_receita_incompleta',
+                ]);
+
+                return
+                    "Receita registrada com sucesso!\n\n"
+                    . "• Descrição: "
+                    . $receita->descricao
+                    . "\n"
+                    . "• Valor: "
+                    . $this->moeda(
+                        (float) $receita->valor
+                    )
+                    . "\n"
+                    . "• Data: "
+                    . $receita->data_recebimento
+                        ->format('d/m/Y')
+                    . "\n"
+                    . "• Situação: Recebida";
+
+            } catch (\Throwable $e) {
+
+                report($e);
+
+                return
+                    'Não consegui gravar a receita. '
+                    . 'Nenhum lançamento foi concluído. '
+                    . 'Confira os dados e tente novamente.';
+            }
+        }
 
         /*
          * Compra no cartão tem prioridade, pois usa fluxo próprio
@@ -4339,7 +5597,7 @@ class AssistenteFinanceiroService
         $descricao =
             trim(
                 preg_replace(
-                    '/\b(?:para|pro|pra|no\s+dia|para\s+o\s+dia|de|do|da|em|no|na)\b/iu',
+                    '/\b(?:para\s+o\s+dia|no\s+dia|o\s+dia|para|pro|pra|de|do|da|em|no|na)\b/iu',
                     ' ',
                     $restante
                 )
@@ -4624,7 +5882,7 @@ class AssistenteFinanceiroService
                     . '(?:com\s+)?'
                     . '(?:r\$\s*)?'
                     . '(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)'
-                    . '\s*(?:reais?|real)?'
+                    . '\s*(?:reais?|real|brl)?'
                     . '(?:\s+(.+))?$/iu',
                     $textoLancamento,
                     $partes
@@ -4640,7 +5898,7 @@ class AssistenteFinanceiroService
                     '/^(?:paguei|gastei|comprei)\s+'
                     . '(?:r\$\s*)?'
                     . '(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)'
-                    . '\s*(?:reais?|real)?'
+                    . '\s*(?:reais?|real|brl)?'
                     . '\s+(.+)$/iu',
                     $textoLancamento,
                     $partes
@@ -4947,7 +6205,7 @@ class AssistenteFinanceiroService
 
         $descricao =
             preg_replace(
-                '/^(?:de|do|da|em|no|na)\s+/iu',
+                '/^(?:com\s+o|com\s+a|de|do|da|em|no|na|com)\s+/iu',
                 '',
                 $descricao
             );
@@ -5279,6 +6537,885 @@ class AssistenteFinanceiroService
             );
 
         return $dados;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | INTERPRETAÇÃO DE RECEITA POR LINGUAGEM NATURAL
+    |--------------------------------------------------------------------------
+    |
+    | Exemplos:
+    | Recebi R$ 500 hoje no Pix
+    | Recebi 200 de salário
+    | Ganhei 350 de comissão ontem
+    | Entrou 300 de venda no Pix pela Nubank
+    |
+    */
+
+    private function extrairLancamentoReceita(
+        string $pergunta
+    ): ?array {
+
+        $original =
+            trim(
+                $pergunta
+            );
+
+        $textoLancamento =
+            preg_replace(
+                '/^eu\s+/iu',
+                '',
+                $original
+            );
+
+        $textoLancamento =
+            trim(
+                (string) $textoLancamento
+            );
+
+        if (
+            !preg_match(
+                '/^(?:recebi|ganhei|entrou)\b/iu',
+                $textoLancamento
+            )
+        ) {
+            return null;
+        }
+
+        if (
+            !preg_match(
+                '/^(?:recebi|ganhei|entrou)\s+'
+                . '(?:r\$\s*)?'
+                . '(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)'
+                . '\s*(?:reais?|real|brl)?'
+                . '(?:\s+(.+))?$/iu',
+                $textoLancamento,
+                $partes
+            )
+        ) {
+            return null;
+        }
+
+        $valorTexto =
+            trim(
+                $partes[1]
+            );
+
+        if (
+            str_contains(
+                $valorTexto,
+                ','
+            )
+        ) {
+
+            $valorTexto =
+                str_replace(
+                    '.',
+                    '',
+                    $valorTexto
+                );
+
+            $valorTexto =
+                str_replace(
+                    ',',
+                    '.',
+                    $valorTexto
+                );
+        }
+
+        $valor =
+            (float) $valorTexto;
+
+        if ($valor <= 0) {
+            return null;
+        }
+
+        $restante =
+            trim(
+                (string) (
+                    $partes[2]
+                    ?? ''
+                )
+            );
+
+        $data =
+            now()
+                ->copy()
+                ->startOfDay();
+
+        $dataDescricao =
+            'hoje';
+
+        if (
+            preg_match(
+                '/\bontem\b/iu',
+                $restante
+            )
+        ) {
+
+            $data =
+                now()
+                    ->copy()
+                    ->subDay()
+                    ->startOfDay();
+
+            $dataDescricao =
+                'ontem';
+
+            $restante =
+                preg_replace(
+                    '/\bontem\b/iu',
+                    '',
+                    $restante
+                );
+
+        } elseif (
+            preg_match(
+                '/\bhoje\b/iu',
+                $restante
+            )
+        ) {
+
+            $restante =
+                preg_replace(
+                    '/\bhoje\b/iu',
+                    '',
+                    $restante
+                );
+
+        } elseif (
+            preg_match(
+                '/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/',
+                $restante,
+                $dataPartes
+            )
+        ) {
+
+            $dia =
+                (int) $dataPartes[1];
+
+            $mes =
+                (int) $dataPartes[2];
+
+            $ano =
+                !empty(
+                    $dataPartes[3]
+                )
+                    ? (int) $dataPartes[3]
+                    : (int) now()->year;
+
+            if ($ano < 100) {
+                $ano += 2000;
+            }
+
+            if (
+                checkdate(
+                    $mes,
+                    $dia,
+                    $ano
+                )
+            ) {
+
+                $data =
+                    \Illuminate\Support\Carbon::create(
+                        $ano,
+                        $mes,
+                        $dia
+                    )->startOfDay();
+
+                $dataDescricao =
+                    $data->format('d/m/Y');
+
+                $restante =
+                    str_replace(
+                        $dataPartes[0],
+                        '',
+                        $restante
+                    );
+            }
+        }
+
+        $formaRecebimento =
+            null;
+
+        $formas = [
+            'pix' =>
+                '/\b(?:no|na|em|com|por)?\s*pix\b/iu',
+
+            'dinheiro' =>
+                '/\b(?:no|na|em|com|por)?\s*dinheiro\b/iu',
+        ];
+
+        foreach ($formas as $forma => $padrao) {
+
+            if (
+                preg_match(
+                    $padrao,
+                    $restante
+                )
+            ) {
+
+                $formaRecebimento =
+                    $forma;
+
+                $restante =
+                    preg_replace(
+                        $padrao,
+                        '',
+                        $restante
+                    );
+
+                break;
+            }
+        }
+
+        $descricao =
+            trim(
+                (string) $restante
+            );
+
+        $descricao =
+            preg_replace(
+                '/^(?:referente\s+a|referente\s+ao|referente\s+aos|de|do|da|por|com|em|no|na)\s+/iu',
+                '',
+                $descricao
+            );
+
+        $descricao =
+            preg_replace(
+                '/\b(?:na\s+minha\s+conta|minha\s+conta|na\s+conta|conta)\b/iu',
+                '',
+                $descricao
+            );
+
+        $descricao =
+            trim(
+                preg_replace(
+                    '/\s+/',
+                    ' ',
+                    (string) $descricao
+                )
+            );
+
+        return [
+            'tipo' =>
+                'receita',
+
+            'descricao' =>
+                $descricao !== ''
+                    ? ucfirst($descricao)
+                    : null,
+
+            'valor' =>
+                $valor,
+
+            'data' =>
+                $data->toDateString(),
+
+            'data_descricao' =>
+                $dataDescricao,
+
+            'forma_pagamento' =>
+                $formaRecebimento,
+
+            'situacao' =>
+                'recebida',
+
+            'pergunta_original' =>
+                $original,
+        ];
+    }
+
+
+    private function prepararLancamentoReceita(
+        int $userId,
+        string $perguntaOriginal,
+        array $dados
+    ): array {
+
+        $dados['pergunta_original'] =
+            $dados['pergunta_original']
+            ?? $perguntaOriginal;
+
+        if (
+            !empty(
+                $dados['descricao']
+            )
+            && empty(
+                $dados['categoria_id']
+            )
+        ) {
+
+            $categoria =
+                $this->resolverCategoriaReceita(
+                    $userId,
+                    $dados['descricao']
+                );
+
+            $dados['categoria_id'] =
+                $categoria?->id;
+
+            $dados['categoria_nome'] =
+                $categoria?->nome;
+        }
+
+        if (
+            empty(
+                $dados['conta_id']
+            )
+        ) {
+
+            $conta =
+                $this->resolverContaLancamento(
+                    $userId,
+                    $perguntaOriginal
+                );
+
+            if (
+                !$conta
+                && (
+                    $dados['forma_pagamento']
+                    ?? null
+                ) === 'dinheiro'
+            ) {
+
+                $conta =
+                    Conta::query()
+                        ->where(
+                            'user_id',
+                            $userId
+                        )
+                        ->where(
+                            'ativa',
+                            true
+                        )
+                        ->get()
+                        ->first(
+                            function ($item) {
+                                return
+                                    $this->normalizar(
+                                        (string) $item->nome
+                                    )
+                                    === 'carteira';
+                            }
+                        );
+            }
+
+            $dados['conta_id'] =
+                $conta?->id;
+
+            $dados['conta_nome'] =
+                $conta?->nome;
+
+            if (
+                $conta
+                && !empty(
+                    $dados['descricao']
+                )
+            ) {
+
+                $dados['descricao'] =
+                    $this->removerContaDaDescricao(
+                        $dados['descricao'],
+                        (string) $conta->nome
+                    );
+            }
+        }
+
+        $formaPagamento =
+            $this->resolverFormaRecebimentoLancamento(
+                $dados['forma_pagamento']
+                    ?? null
+            );
+
+        $dados['forma_pagamento_id'] =
+            $formaPagamento?->id;
+
+        $dados['forma_pagamento_nome'] =
+            $formaPagamento?->nome;
+
+        return $dados;
+    }
+
+
+    private function montarPreviaLancamentoReceita(
+        int $userId,
+        array $dados
+    ): string {
+
+        if (
+            empty(
+                $dados['descricao']
+            )
+        ) {
+
+            session([
+                'assistente_receita_incompleta' => [
+                    'user_id' =>
+                        $userId,
+
+                    'etapa' =>
+                        'descricao',
+
+                    'dados' =>
+                        $dados,
+                ],
+            ]);
+
+            return
+                "Entendi que você recebeu "
+                . $this->moeda(
+                    (float) $dados['valor']
+                )
+                . ".\n\n"
+                . "Qual foi a origem ou descrição dessa receita?\n"
+                . "Exemplos: Salário, Venda, Comissão, Reembolso.";
+        }
+
+        if (
+            empty(
+                $dados['categoria_id']
+            )
+        ) {
+
+            session([
+                'assistente_receita_incompleta' => [
+                    'user_id' =>
+                        $userId,
+
+                    'etapa' =>
+                        'categoria',
+
+                    'dados' =>
+                        $dados,
+                ],
+            ]);
+
+            return
+                "Identifiquei a receita, mas preciso saber a categoria.\n\n"
+                . "Categorias de receita ativas:\n"
+                . $this->listarCategoriasReceitaAtivas(
+                    $userId
+                )
+                . "\n\nResponda apenas com o nome da categoria.";
+        }
+
+        if (
+            empty(
+                $dados['conta_id']
+            )
+        ) {
+
+            session([
+                'assistente_receita_incompleta' => [
+                    'user_id' =>
+                        $userId,
+
+                    'etapa' =>
+                        'conta',
+
+                    'dados' =>
+                        $dados,
+                ],
+            ]);
+
+            return
+                "Entendi a receita, mas preciso saber em qual conta o valor entrou.\n\n"
+                . "Contas ativas:\n"
+                . $this->listarContasAtivas(
+                    $userId
+                )
+                . "\n\nResponda apenas com o nome da conta.";
+        }
+
+        session()->forget(
+            'assistente_receita_incompleta'
+        );
+
+        session([
+            'assistente_lancamento_receita' => [
+                'user_id' =>
+                    $userId,
+
+                'categoria_id' =>
+                    $dados['categoria_id'],
+
+                'conta_id' =>
+                    $dados['conta_id'],
+
+                'forma_pagamento_id' =>
+                    $dados['forma_pagamento_id']
+                    ?? null,
+
+                'descricao' =>
+                    $dados['descricao'],
+
+                'valor' =>
+                    (float) $dados['valor'],
+
+                'data' =>
+                    $dados['data'],
+            ],
+        ]);
+
+        $forma =
+            $dados['forma_pagamento_nome']
+            ?? match (
+                $dados['forma_pagamento']
+                    ?? null
+            ) {
+                'pix' => 'Pix',
+                'dinheiro' => 'Dinheiro',
+                default => 'Não informada',
+            };
+
+        return
+            "Confirme a receita recebida:\n\n"
+            . "• Descrição: "
+            . $dados['descricao']
+            . "\n"
+            . "• Valor: "
+            . $this->moeda(
+                (float) $dados['valor']
+            )
+            . "\n"
+            . "• Data: "
+            . $dados['data_descricao']
+            . "\n"
+            . "• Forma de recebimento: "
+            . $forma
+            . "\n"
+            . "• Categoria: "
+            . $dados['categoria_nome']
+            . "\n"
+            . "• Conta: "
+            . $dados['conta_nome']
+            . "\n"
+            . "• Situação: Recebida\n\n"
+            . "Para gravar, digite exatamente:\n"
+            . "CONFIRMAR LANÇAMENTO\n\n"
+            . "Para desistir:\n"
+            . "CANCELAR LANÇAMENTO\n\n"
+            . "Ainda não foi gravado.";
+    }
+
+
+    private function resolverCategoriaReceita(
+        int $userId,
+        string $descricao
+    ): ?Categoria {
+
+        $categorias =
+            Categoria::query()
+                ->where(
+                    'user_id',
+                    $userId
+                )
+                ->where(
+                    'tipo',
+                    'receita'
+                )
+                ->where(
+                    'ativa',
+                    true
+                )
+                ->orderBy('nome')
+                ->get();
+
+        if ($categorias->isEmpty()) {
+            return null;
+        }
+
+        $descricaoNormalizada =
+            $this->normalizar(
+                $descricao
+            );
+
+        $melhor =
+            null;
+
+        $melhorTamanho =
+            0;
+
+        foreach ($categorias as $categoria) {
+
+            $nome =
+                $this->normalizar(
+                    (string) $categoria->nome
+                );
+
+            if ($nome === '') {
+                continue;
+            }
+
+            if (
+                str_contains(
+                    $descricaoNormalizada,
+                    $nome
+                )
+                || str_contains(
+                    $nome,
+                    $descricaoNormalizada
+                )
+            ) {
+
+                $tamanho =
+                    strlen(
+                        $nome
+                    );
+
+                if ($tamanho > $melhorTamanho) {
+                    $melhor = $categoria;
+                    $melhorTamanho = $tamanho;
+                }
+            }
+        }
+
+        return $melhor;
+    }
+
+
+    private function resolverCategoriaReceitaPorResposta(
+        int $userId,
+        string $resposta
+    ): ?Categoria {
+
+        $texto =
+            $this->normalizar(
+                $resposta
+            );
+
+        if ($texto === '') {
+            return null;
+        }
+
+        $categorias =
+            Categoria::query()
+                ->where(
+                    'user_id',
+                    $userId
+                )
+                ->where(
+                    'tipo',
+                    'receita'
+                )
+                ->where(
+                    'ativa',
+                    true
+                )
+                ->orderBy('nome')
+                ->get();
+
+        foreach ($categorias as $categoria) {
+
+            $nome =
+                $this->normalizar(
+                    (string) $categoria->nome
+                );
+
+            if (
+                $texto === $nome
+                || str_contains(
+                    $texto,
+                    $nome
+                )
+                || str_contains(
+                    $nome,
+                    $texto
+                )
+            ) {
+                return $categoria;
+            }
+        }
+
+        return null;
+    }
+
+
+    private function listarCategoriasReceitaAtivas(
+        int $userId
+    ): string {
+
+        $categorias =
+            Categoria::query()
+                ->where(
+                    'user_id',
+                    $userId
+                )
+                ->where(
+                    'tipo',
+                    'receita'
+                )
+                ->where(
+                    'ativa',
+                    true
+                )
+                ->orderBy('nome')
+                ->pluck('nome');
+
+        if ($categorias->isEmpty()) {
+            return
+                '• Nenhuma categoria de receita ativa cadastrada';
+        }
+
+        return
+            $categorias
+                ->map(
+                    fn ($nome) =>
+                        '• ' . $nome
+                )
+                ->implode("\n");
+    }
+
+
+    private function resolverContaPorResposta(
+        int $userId,
+        string $resposta
+    ): ?Conta {
+
+        $texto =
+            $this->normalizar(
+                $resposta
+            );
+
+        if ($texto === '') {
+            return null;
+        }
+
+        $contas =
+            Conta::query()
+                ->where(
+                    'user_id',
+                    $userId
+                )
+                ->where(
+                    'ativa',
+                    true
+                )
+                ->orderBy('nome')
+                ->get();
+
+        foreach ($contas as $conta) {
+
+            $nome =
+                $this->normalizar(
+                    (string) $conta->nome
+                );
+
+            if (
+                $texto === $nome
+                || str_contains(
+                    $texto,
+                    $nome
+                )
+                || str_contains(
+                    $nome,
+                    $texto
+                )
+            ) {
+                return $conta;
+            }
+        }
+
+        return null;
+    }
+
+
+    private function listarContasAtivas(
+        int $userId
+    ): string {
+
+        $contas =
+            Conta::query()
+                ->where(
+                    'user_id',
+                    $userId
+                )
+                ->where(
+                    'ativa',
+                    true
+                )
+                ->orderBy('nome')
+                ->pluck('nome');
+
+        if ($contas->isEmpty()) {
+            return
+                '• Nenhuma conta ativa cadastrada';
+        }
+
+        return
+            $contas
+                ->map(
+                    fn ($nome) =>
+                        '• ' . $nome
+                )
+                ->implode("\n");
+    }
+
+
+    private function resolverFormaRecebimentoLancamento(
+        ?string $formaIdentificada
+    ): ?FormaPagamento {
+
+        if (!$formaIdentificada) {
+            return null;
+        }
+
+        $formas =
+            FormaPagamento::query()
+                ->where(
+                    'ativa',
+                    true
+                )
+                ->whereIn(
+                    'tipo',
+                    [
+                        'recebimento',
+                        'ambos',
+                    ]
+                )
+                ->orderBy('nome')
+                ->get();
+
+        $aliases =
+            match ($formaIdentificada) {
+                'pix' => ['pix'],
+                'dinheiro' => ['dinheiro'],
+                default => [$formaIdentificada],
+            };
+
+        foreach ($formas as $forma) {
+
+            $nome =
+                $this->normalizar(
+                    (string) $forma->nome
+                );
+
+            foreach ($aliases as $alias) {
+
+                $aliasNormalizado =
+                    $this->normalizar(
+                        $alias
+                    );
+
+                if (
+                    $nome === $aliasNormalizado
+                    || str_contains(
+                        $nome,
+                        $aliasNormalizado
+                    )
+                    || str_contains(
+                        $aliasNormalizado,
+                        $nome
+                    )
+                ) {
+                    return $forma;
+                }
+            }
+        }
+
+        return null;
     }
 
 

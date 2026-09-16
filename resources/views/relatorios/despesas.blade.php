@@ -542,6 +542,13 @@
                     </option>
 
                     <option
+                        value="a_pagar"
+                        @selected($situacao === 'a_pagar')
+                    >
+                        A pagar
+                    </option>
+
+                    <option
                         value="pendente"
                         @selected($situacao === 'pendente')
                     >

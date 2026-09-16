@@ -573,6 +573,35 @@ class ContaPagarController extends Controller
                                     today()
                                 );
 
+                            /*
+                             * "A pagar" reúne tudo que ainda representa
+                             * obrigação financeira, independentemente da
+                             * situação visual/técnica do item.
+                             *
+                             * Nesta tela já carregamos somente itens ainda
+                             * não quitados: despesas/parcelas pendentes,
+                             * recorrências previstas e faturas aberta/fechada
+                             * com saldo restante.
+                             */
+                            if (
+                                $situacaoFiltro
+                                === 'a_pagar'
+                            ) {
+                                return
+                                    $estaVencida
+                                    ||
+                                    in_array(
+                                        $situacao,
+                                        [
+                                            'pendente',
+                                            'prevista',
+                                            'aberta',
+                                            'fechada',
+                                        ],
+                                        true
+                                    );
+                            }
+
                             if (
                                 $situacaoFiltro
                                 === 'vencida'
