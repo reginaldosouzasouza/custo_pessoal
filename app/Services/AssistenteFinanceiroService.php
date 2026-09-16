@@ -128,6 +128,16 @@ class AssistenteFinanceiroService
             'quanto entrou hoje',
         ],
 
+        'receitas_pendentes' => [
+            'quais receitas ainda estao pendentes',
+            'quais as receitas ainda estao pendentes',
+            'quais receitas estao pendentes',
+            'receitas pendentes',
+            'tenho receitas pendentes',
+            'o que tenho para receber',
+            'o que ainda tenho para receber',
+        ],
+
         'gastos_mes' => [
             'quanto gastei este mes',
             'quanto eu gastei este mes',
@@ -982,6 +992,42 @@ class AssistenteFinanceiroService
     private function detectarIntencao(string $texto): ?string
     {
         /*
+         * Prioridades de contexto.
+         *
+         * "Disponível nas minhas contas" deve significar saldo de contas,
+         * enquanto "disponível no cartão" deve significar limite do cartão.
+         */
+        $mencionaCartao =
+            str_contains($texto, 'cartao');
+
+        $mencionaConta =
+            str_contains($texto, 'conta')
+            || str_contains($texto, 'contas')
+            || str_contains($texto, 'carteira')
+            || str_contains($texto, 'carteiras');
+
+        $mencionaDisponibilidade =
+            str_contains($texto, 'saldo')
+            || str_contains($texto, 'disponivel')
+            || str_contains($texto, 'limite')
+            || str_contains($texto, 'quanto posso gastar');
+
+        if (
+            $mencionaCartao
+            && $mencionaDisponibilidade
+        ) {
+            return 'limite_cartao';
+        }
+
+        if (
+            $mencionaConta
+            && $mencionaDisponibilidade
+            && !$mencionaCartao
+        ) {
+            return 'saldo_atual';
+        }
+
+        /*
          * Primeiro tentamos correspondência exata/parcial.
          * Isso evita que uma frase sobre receita seja confundida
          * com uma intenção de despesa apenas por similaridade textual.
@@ -1130,6 +1176,9 @@ class AssistenteFinanceiroService
 
             'receitas_hoje' =>
                 $this->totalReceitasHoje($userId),
+
+            'receitas_pendentes' =>
+                $this->receitasPendentes($userId),
 
             'gastos_mes' =>
                 $this->totalGastoMes($userId),
@@ -1442,7 +1491,15 @@ class AssistenteFinanceiroService
 
             [
                 'regex' =>
-                    '/^(?:qual|quando e)\s+(?:a\s+)?proxima parcela\s+(?:do|da|de)?\s*(.+)$/',
+                    '/^(?:'
+                    . 'qual'
+                    . '|quando e'
+                    . '|quando vence'
+                    . '|quanto vence'
+                    . '|quanto e'
+                    . '|qual e o valor de'
+                    . '|qual o valor de'
+                    . ')\s+(?:a\s+)?proxima parcela\s+(?:do|da|de)?\s*(.+)$/',
 
                 'tipo' =>
                     'proxima_parcela',
@@ -1513,6 +1570,41 @@ class AssistenteFinanceiroService
         string $tipo
     ): string {
 
+        /*
+         * Remove palavras genéricas da linguagem natural.
+         * Ex.: "conta da internet" -> "internet".
+         */
+        $termoLimpo =
+            trim(
+                (string) preg_replace(
+                    '/^(?:conta\s+(?:da|do|de)\s+|conta\s+)/',
+                    '',
+                    $termo
+                )
+            );
+
+        if ($termoLimpo !== '') {
+            $termo =
+                $termoLimpo;
+        }
+
+        /*
+         * O usuário pode chamar um compromisso pela categoria, e não
+         * pela descrição cadastrada. Ex.: descrição "LIGGA",
+         * categoria "Internet".
+         */
+        $categoriaIds =
+            Categoria::query()
+                ->where('user_id', $userId)
+                ->where('tipo', 'despesa')
+                ->where('ativa', true)
+                ->where(
+                    'nome',
+                    'like',
+                    '%' . $termo . '%'
+                )
+                ->pluck('id');
+
         $itens =
             collect();
 
@@ -1523,9 +1615,24 @@ class AssistenteFinanceiroService
                     $userId
                 )
                 ->where(
-                    'descricao',
-                    'like',
-                    '%' . $termo . '%'
+                    function ($query) use (
+                        $termo,
+                        $categoriaIds
+                    ) {
+
+                        $query->where(
+                            'descricao',
+                            'like',
+                            '%' . $termo . '%'
+                        );
+
+                        if ($categoriaIds->isNotEmpty()) {
+                            $query->orWhereIn(
+                                'categoria_id',
+                                $categoriaIds
+                            );
+                        }
+                    }
                 )
                 ->orderBy(
                     'data_vencimento'
@@ -1561,12 +1668,30 @@ class AssistenteFinanceiroService
                 )
                 ->whereHas(
                     'parcelamento',
-                    function ($query) use ($termo) {
+                    function ($query) use (
+                        $termo,
+                        $categoriaIds
+                    ) {
 
                         $query->where(
-                            'descricao',
-                            'like',
-                            '%' . $termo . '%'
+                            function ($subQuery) use (
+                                $termo,
+                                $categoriaIds
+                            ) {
+
+                                $subQuery->where(
+                                    'descricao',
+                                    'like',
+                                    '%' . $termo . '%'
+                                );
+
+                                if ($categoriaIds->isNotEmpty()) {
+                                    $subQuery->orWhereIn(
+                                        'categoria_id',
+                                        $categoriaIds
+                                    );
+                                }
+                            }
                         );
                     }
                 )
@@ -1630,9 +1755,24 @@ class AssistenteFinanceiroService
                     true
                 )
                 ->where(
-                    'descricao',
-                    'like',
-                    '%' . $termo . '%'
+                    function ($query) use (
+                        $termo,
+                        $categoriaIds
+                    ) {
+
+                        $query->where(
+                            'descricao',
+                            'like',
+                            '%' . $termo . '%'
+                        );
+
+                        if ($categoriaIds->isNotEmpty()) {
+                            $query->orWhereIn(
+                                'categoria_id',
+                                $categoriaIds
+                            );
+                        }
+                    }
                 )
                 ->get();
 
@@ -2587,6 +2727,93 @@ class AssistenteFinanceiroService
             ]);
         }
 
+        /*
+         * Recorrências previstas também fazem parte de Contas a Pagar.
+         * Incluímos a ocorrência da data consultada, sem duplicar quando
+         * ela já tiver sido gerada como despesa.
+         */
+        $recorrencias =
+            Recorrencia::query()
+                ->where('user_id', $userId)
+                ->where('tipo', 'despesa')
+                ->where('ativa', true)
+                ->whereDate(
+                    'data_inicio',
+                    '<=',
+                    $dataBanco
+                )
+                ->where(
+                    function ($query) use ($dataBanco) {
+                        $query
+                            ->whereNull('data_fim')
+                            ->orWhereDate(
+                                'data_fim',
+                                '>=',
+                                $dataBanco
+                            );
+                    }
+                )
+                ->get();
+
+        foreach ($recorrencias as $recorrencia) {
+
+            $inicioMes =
+                $data->copy()->startOfMonth();
+
+            $fimMes =
+                $data->copy()->endOfMonth();
+
+            $vencimentos =
+                $this->vencimentosRecorrenciaNoMes(
+                    $recorrencia,
+                    $inicioMes,
+                    $fimMes
+                );
+
+            foreach ($vencimentos as $vencimento) {
+
+                if (
+                    $vencimento->toDateString()
+                    !== $dataBanco
+                ) {
+                    continue;
+                }
+
+                $jaGerada =
+                    Despesa::query()
+                        ->where('user_id', $userId)
+                        ->where(
+                            'recorrencia_id',
+                            $recorrencia->id
+                        )
+                        ->whereDate(
+                            'data_vencimento',
+                            $dataBanco
+                        )
+                        ->where(
+                            'situacao',
+                            '!=',
+                            'cancelada'
+                        )
+                        ->exists();
+
+                if ($jaGerada) {
+                    continue;
+                }
+
+                $itens->push([
+                    'descricao' =>
+                        $recorrencia->descricao,
+
+                    'valor' =>
+                        (float) (
+                            $recorrencia->valor_padrao
+                            ?? 0
+                        ),
+                ]);
+            }
+        }
+
         if ($itens->isEmpty()) {
 
             $temCompromissos =
@@ -2704,6 +2931,85 @@ class AssistenteFinanceiroService
             $mes,
             $dia
         )->startOfDay();
+    }
+
+
+    private function receitasPendentes(int $userId): string
+    {
+        $receitas =
+            Receita::query()
+                ->where('user_id', $userId)
+                ->where('situacao', 'pendente')
+                ->orderBy('data_prevista')
+                ->get();
+
+        if ($receitas->isEmpty()) {
+
+            $temReceitas =
+                Receita::query()
+                    ->where('user_id', $userId)
+                    ->exists();
+
+            if (!$temReceitas) {
+                return
+                    "Ainda não encontrei receitas cadastradas.\n\n"
+                    . "Quando você registrar valores a receber, eu conseguirei "
+                    . "mostrar quais receitas ainda estão pendentes.";
+            }
+
+            return
+                'Você não possui receitas pendentes no momento.';
+        }
+
+        $total =
+            (float) $receitas->sum('valor');
+
+        $linhas =
+            $receitas
+                ->take(10)
+                ->map(
+                    function ($receita) {
+
+                        $data =
+                            $receita->data_prevista
+                                ? $receita->data_prevista->format('d/m/Y')
+                                : '-';
+
+                        return
+                            '• '
+                            . $receita->descricao
+                            . ' — '
+                            . $this->moeda(
+                                (float) $receita->valor
+                            )
+                            . ' — prevista para '
+                            . $data;
+                    }
+                )
+                ->implode("\n");
+
+        $resposta =
+            'Você possui '
+            . $receitas->count()
+            . ' receita'
+            . ($receitas->count() === 1 ? '' : 's')
+            . ' pendente'
+            . ($receitas->count() === 1 ? '' : 's')
+            . ', totalizando '
+            . $this->moeda($total)
+            . ":\n"
+            . $linhas;
+
+        if ($receitas->count() > 10) {
+            $resposta .=
+                "\n• E mais "
+                . ($receitas->count() - 10)
+                . ' receita'
+                . (($receitas->count() - 10) === 1 ? '' : 's')
+                . '.';
+        }
+
+        return $resposta;
     }
 
 
@@ -2901,6 +3207,56 @@ class AssistenteFinanceiroService
                 'descricao' => $descricao,
                 'valor' => (float) $parcela->valor,
                 'vencimento' => $parcela->data_vencimento,
+            ]);
+        }
+
+        /*
+         * Faturas abertas também aparecem em Contas a Pagar.
+         */
+        $faturas =
+            Fatura::query()
+                ->with('cartao')
+                ->where('user_id', $userId)
+                ->whereBetween(
+                    'data_vencimento',
+                    [
+                        $inicio->toDateString(),
+                        $fim->toDateString(),
+                    ]
+                )
+                ->where(
+                    'situacao',
+                    '!=',
+                    'paga'
+                )
+                ->get();
+
+        foreach ($faturas as $fatura) {
+
+            $restante =
+                max(
+                    0,
+                    (float) $fatura->valor_total
+                    - (float) $fatura->valor_pago
+                );
+
+            if ($restante <= 0) {
+                continue;
+            }
+
+            $itens->push([
+                'descricao' =>
+                    'Fatura '
+                    . (
+                        $fatura->cartao?->nome
+                        ?? 'Cartão'
+                    ),
+
+                'valor' =>
+                    $restante,
+
+                'vencimento' =>
+                    $fatura->data_vencimento,
             ]);
         }
 
