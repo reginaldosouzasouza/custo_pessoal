@@ -251,6 +251,7 @@ class AssistenteFinanceiroService
                 'assistente_compra_cartao',
                 'assistente_compra_cartao_incompleta',
                 'assistente_despesa_pendente_incompleta',
+                'assistente_despesa_incompleta',
             ]);
 
             return
@@ -521,6 +522,85 @@ class AssistenteFinanceiroService
 
         /*
         |--------------------------------------------------------------------------
+        | CONTINUAÇÃO DE DESPESA INCOMPLETA
+        |--------------------------------------------------------------------------
+        |
+        | Quando a despesa já foi interpretada, mas falta apenas a conta,
+        | o usuário pode responder somente com o nome da conta:
+        | ITAU, Banco Sicredi, Carteira, etc.
+        |
+        */
+
+        $despesaIncompleta =
+            session(
+                'assistente_despesa_incompleta'
+            );
+
+        if (
+            is_array(
+                $despesaIncompleta
+            )
+            && (int) (
+                $despesaIncompleta['user_id']
+                ?? 0
+            ) === $userId
+            && !in_array(
+                $texto,
+                [
+                    'cancelar lancamento',
+                    'cancelar despesa',
+                ],
+                true
+            )
+        ) {
+
+            $etapa =
+                $despesaIncompleta['etapa']
+                ?? null;
+
+            $dados =
+                $despesaIncompleta['dados']
+                ?? [];
+
+            if ($etapa === 'conta') {
+
+                $conta =
+                    $this->resolverContaPorResposta(
+                        $userId,
+                        $perguntaOriginal
+                    );
+
+                if ($conta) {
+
+                    $dados['conta_id'] =
+                        $conta->id;
+
+                    $dados['conta_nome'] =
+                        $conta->nome;
+
+                    session()->forget(
+                        'assistente_despesa_incompleta'
+                    );
+
+                    return
+                        $this->montarPreviaLancamentoDespesa(
+                            $dados
+                        );
+                }
+
+                return
+                    "Não consegui identificar de qual conta saiu o dinheiro.\n\n"
+                    . "Contas ativas:\n"
+                    . $this->listarContasAtivas(
+                        $userId
+                    )
+                    . "\n\nResponda apenas com o nome da conta.";
+            }
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
         | CONFIRMAÇÃO / CANCELAMENTO DE LANÇAMENTO
         |--------------------------------------------------------------------------
         |
@@ -564,6 +644,7 @@ class AssistenteFinanceiroService
                 'assistente_receita_incompleta',
                 'assistente_compra_cartao',
                 'assistente_compra_cartao_incompleta',
+                'assistente_despesa_incompleta',
             ]);
 
             return
@@ -6274,6 +6355,10 @@ class AssistenteFinanceiroService
                 . "Nenhum lançamento foi gravado.";
         }
 
+        session()->forget(
+            'assistente_despesa_incompleta'
+        );
+
         session([
             'assistente_lancamento_despesa' => [
                 'user_id' =>
@@ -8939,6 +9024,19 @@ class AssistenteFinanceiroService
                         ->implode("
 ")
                     : '• Nenhuma conta ativa cadastrada';
+
+            session([
+                'assistente_despesa_incompleta' => [
+                    'user_id' =>
+                        auth()->id(),
+
+                    'etapa' =>
+                        'conta',
+
+                    'dados' =>
+                        $dados,
+                ],
+            ]);
 
             return
                 $resposta
