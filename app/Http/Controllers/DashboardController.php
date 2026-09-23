@@ -493,11 +493,6 @@ class DashboardController extends Controller
                             $vencimento
                                 ->toDateString()
                         )
-                        ->where(
-                            'situacao',
-                            '!=',
-                            'cancelada'
-                        )
                         ->exists();
 
 
@@ -677,11 +672,6 @@ class DashboardController extends Controller
                         ->whereDate(
                             'data_vencimento',
                             $vencimento->toDateString()
-                        )
-                        ->where(
-                            'situacao',
-                            '!=',
-                            'cancelada'
                         )
                         ->exists();
 
