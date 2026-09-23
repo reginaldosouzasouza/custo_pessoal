@@ -219,11 +219,6 @@ class PrevisaoDespesaController extends Controller
                                 'data_vencimento',
                                 $vencimento->toDateString()
                             )
-                            ->where(
-                                'situacao',
-                                '!=',
-                                'cancelada'
-                            )
                             ->exists();
 
                     if ($jaGerada) {
