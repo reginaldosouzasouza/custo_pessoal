@@ -394,13 +394,7 @@ class ContaPagarController extends Controller
                             )
                             ->whereDate(
                                 'data_vencimento',
-                                $vencimento
-                                    ->toDateString()
-                            )
-                            ->where(
-                                'situacao',
-                                '!=',
-                                'cancelada'
+                                $vencimento->toDateString()
                             )
                             ->exists();
                 }
@@ -909,11 +903,6 @@ class ContaPagarController extends Controller
                         'data_vencimento',
                         $dados['vencimento']
                     )
-                    ->where(
-                        'situacao',
-                        '!=',
-                        'cancelada'
-                    )
                     ->exists();
 
 
@@ -1069,6 +1058,164 @@ class ContaPagarController extends Controller
             'Despesa recorrente paga com sucesso.'
         );
     }
+
+
+    /*
+|--------------------------------------------------------------------------
+| CANCELAR OCORRÊNCIA RECORRENTE
+|--------------------------------------------------------------------------
+*/
+
+public function cancelarRecorrencia(
+    Request $request,
+    Recorrencia $recorrencia
+)   {
+
+        abort_unless(
+            $recorrencia->user_id === auth()->id(),
+            403
+        );
+
+        abort_unless(
+            $recorrencia->tipo === 'despesa',
+            403
+        );
+
+        $dados = $request->validate([
+
+            'vencimento' => [
+                'required',
+                'date',
+            ],
+
+        ]);
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | GARANTE QUE O CAMPO DE LIGAÇÃO EXISTE
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            !Schema::hasColumn(
+                'despesas',
+                'recorrencia_id'
+            )
+        ) {
+
+            return back()->with(
+                'error',
+                'Não foi possível cancelar esta ocorrência recorrente.'
+            );
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | VERIFICA SE A OCORRÊNCIA JÁ FOI TRATADA
+        |--------------------------------------------------------------------------
+        */
+
+        $jaExiste =
+            Despesa::query()
+                ->where(
+                    'user_id',
+                    auth()->id()
+                )
+                ->where(
+                    'recorrencia_id',
+                    $recorrencia->id
+                )
+                ->whereDate(
+                    'data_vencimento',
+                    $dados['vencimento']
+                )
+                ->exists();
+
+
+        if ($jaExiste) {
+
+            return back()->with(
+                'error',
+                'Esta ocorrência recorrente já foi processada.'
+            );
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | REGISTRA A OCORRÊNCIA COMO CANCELADA
+        |--------------------------------------------------------------------------
+        */
+
+        $despesa =
+            new Despesa();
+
+        $despesa->user_id =
+            auth()->id();
+
+        $despesa->categoria_id =
+            $recorrencia->categoria_id;
+
+        $despesa->conta_id =
+            null;
+
+        $despesa->forma_pagamento_id =
+            null;
+
+        $despesa->recorrencia_id =
+            $recorrencia->id;
+
+        $despesa->descricao =
+            $recorrencia->descricao;
+
+        $despesa->valor =
+            (float) (
+                $recorrencia->valor_padrao
+                ?? 0
+            );
+
+        $despesa->data_despesa =
+            $dados['vencimento'];
+
+        $despesa->data_vencimento =
+            $dados['vencimento'];
+
+        $despesa->data_pagamento =
+            null;
+
+        $despesa->situacao =
+            'cancelada';
+
+        $despesa->essencial =
+            $recorrencia
+                ->categoria?->classificacao
+            === 'essencial';
+
+        $despesa->valor_estimado =
+            false;
+
+        $despesa->paga_em =
+            null;
+
+        $despesa->cancelada_em =
+            now();
+
+        $despesa->observacao =
+            'Ocorrência da recorrência #'
+            . $recorrencia->id
+            . ' cancelada. A despesa não ocorreu.';
+
+        $despesa->save();
+
+
+        return back()->with(
+            'success',
+            'Ocorrência recorrente cancelada com sucesso.'
+        );
+    }
+
 
 
     /*

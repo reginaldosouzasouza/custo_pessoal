@@ -241,6 +241,38 @@
         background:#15803d;
     }
 
+    .acoes-conta {
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        gap:6px;
+        flex-wrap:wrap;
+    }
+
+    .btn-cancelar-conta {
+        min-height:32px;
+        border:none;
+        background:#dc2626;
+        color:#fff;
+        padding:0 14px;
+        border-radius:7px;
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        font-size:11px;
+        font-weight:600;
+        cursor:pointer;
+        white-space:nowrap;
+    }
+
+    .btn-cancelar-conta:hover {
+        background:#b91c1c;
+    }
+
+    .form-cancelar-conta {
+        margin:0;
+    }
+
     /*
     |--------------------------------------------------------------------------
     | MODAL
@@ -436,9 +468,20 @@
         border-top:1px solid #e5e7eb;
     }
 
-    .conta-mobile-acoes .btn-pagar {
+    .conta-mobile-acoes .acoes-conta {
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:8px;
+    }
+
+    .conta-mobile-acoes .btn-pagar,
+    .conta-mobile-acoes .btn-cancelar-conta {
         width:100%;
         min-height:36px;
+    }
+
+    .conta-mobile-acoes .form-cancelar-conta {
+        width:100%;
     }
 
     @media(max-width:1250px) {
@@ -1125,13 +1168,100 @@
 
                         <td style="text-align:center;">
 
-                            <button
-                                type="button"
-                                class="btn-pagar"
-                                onclick="abrirModal('{{ $modalId }}')"
-                            >
-                                Pagar
-                            </button>
+                            <div class="acoes-conta">
+
+                                <button
+                                    type="button"
+                                    class="btn-pagar"
+                                    onclick="abrirModal('{{ $modalId }}')"
+                                >
+                                    Pagar
+                                </button>
+
+
+                                @if($tipo === 'despesa')
+
+                                    <form
+                                        method="POST"
+                                        action="{{ route(
+                                            'despesas.cancelar',
+                                            $item['id']
+                                        ) }}"
+                                        class="form-cancelar-conta"
+                                        onsubmit="return confirm(
+                                            'Deseja realmente cancelar esta despesa?'
+                                        );"
+                                    >
+                                        @csrf
+
+                                        <button
+                                            type="submit"
+                                            class="btn-cancelar-conta"
+                                        >
+                                            Cancelar
+                                        </button>
+
+                                    </form>
+
+
+                                @elseif($tipo === 'parcela')
+
+                                    <form
+                                        method="POST"
+                                        action="{{ route(
+                                            'parcelas.cancelar',
+                                            $item['id']
+                                        ) }}"
+                                        class="form-cancelar-conta"
+                                        onsubmit="return confirm(
+                                            'Deseja realmente cancelar esta parcela?'
+                                        );"
+                                    >
+                                        @csrf
+
+                                        <button
+                                            type="submit"
+                                            class="btn-cancelar-conta"
+                                        >
+                                            Cancelar
+                                        </button>
+
+                                    </form>
+
+
+                                @elseif($tipo === 'recorrente')
+
+                                    <form
+                                        method="POST"
+                                        action="{{ route(
+                                            'contas-a-pagar.recorrencias.cancelar',
+                                            $item['id']
+                                        ) }}"
+                                        class="form-cancelar-conta"
+                                        onsubmit="return confirm(
+                                            'Deseja cancelar somente esta ocorrência? A recorrência continuará ativa.'
+                                        );"
+                                    >
+                                        @csrf
+
+                                        <input
+                                            type="hidden"
+                                            name="vencimento"
+                                            value="{{ $vencimentoBanco }}"
+                                        >
+
+                                        <button
+                                            type="submit"
+                                            class="btn-cancelar-conta"
+                                        >
+                                            Cancelar
+                                        </button>
+
+                                    </form>
+
+                                @endif
+
+                            </div>
 
                         </td>
 
@@ -1640,13 +1770,100 @@
 
                     <div class="conta-mobile-acoes">
 
-                        <button
-                            type="button"
-                            class="btn-pagar"
-                            onclick="abrirModal('{{ $modalId }}')"
-                        >
-                            Pagar
-                        </button>
+                        <div class="acoes-conta">
+
+                            <button
+                                type="button"
+                                class="btn-pagar"
+                                onclick="abrirModal('{{ $modalId }}')"
+                            >
+                                Pagar
+                            </button>
+
+
+                            @if($tipo === 'despesa')
+
+                                <form
+                                    method="POST"
+                                    action="{{ route(
+                                        'despesas.cancelar',
+                                        $item['id']
+                                    ) }}"
+                                    class="form-cancelar-conta"
+                                    onsubmit="return confirm(
+                                        'Deseja realmente cancelar esta despesa?'
+                                    );"
+                                >
+                                    @csrf
+
+                                    <button
+                                        type="submit"
+                                        class="btn-cancelar-conta"
+                                    >
+                                        Cancelar
+                                    </button>
+
+                                </form>
+
+
+                            @elseif($tipo === 'parcela')
+
+                                <form
+                                    method="POST"
+                                    action="{{ route(
+                                        'parcelas.cancelar',
+                                        $item['id']
+                                    ) }}"
+                                    class="form-cancelar-conta"
+                                    onsubmit="return confirm(
+                                        'Deseja realmente cancelar esta parcela?'
+                                    );"
+                                >
+                                    @csrf
+
+                                    <button
+                                        type="submit"
+                                        class="btn-cancelar-conta"
+                                    >
+                                        Cancelar
+                                    </button>
+
+                                </form>
+
+
+                            @elseif($tipo === 'recorrente')
+
+                                <form
+                                    method="POST"
+                                    action="{{ route(
+                                        'contas-a-pagar.recorrencias.cancelar',
+                                        $item['id']
+                                    ) }}"
+                                    class="form-cancelar-conta"
+                                    onsubmit="return confirm(
+                                        'Deseja cancelar somente esta ocorrência? A recorrência continuará ativa.'
+                                    );"
+                                >
+                                    @csrf
+
+                                    <input
+                                        type="hidden"
+                                        name="vencimento"
+                                        value="{{ $vencimentoBanco }}"
+                                    >
+
+                                    <button
+                                        type="submit"
+                                        class="btn-cancelar-conta"
+                                    >
+                                        Cancelar
+                                    </button>
+
+                                </form>
+
+                            @endif
+
+                        </div>
 
                     </div>
 

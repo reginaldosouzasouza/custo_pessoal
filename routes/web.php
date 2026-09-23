@@ -352,6 +352,11 @@ Route::middleware('auth')->group(function () {
         [ContaPagarController::class, 'pagarRecorrencia']
     )->name('contas-a-pagar.recorrencias.pagar');
 
+    Route::post(
+        '/contas-a-pagar/recorrencias/{recorrencia}/cancelar',
+        [ContaPagarController::class, 'cancelarRecorrencia']
+    )->name('contas-a-pagar.recorrencias.cancelar');
+
     Route::middleware('admin.financeiro')
     ->prefix('admin')
     ->name('admin.')
